@@ -75,6 +75,7 @@
       <button id="startBtn" class="go">▶ Start</button>
       <button id="stopBtn" class="danger">■ Stop</button>
       <button id="giveNow" class="secondary">Give Task Now</button>
+      <button id="cashBtn">💰 Cash out</button>
     </div>
   </div>
 
@@ -95,6 +96,25 @@
   </div>
 
   <div class="card"><h2>Recently completed</h2><div id="doneLog" class="sub">Nothing yet.</div></div>
+
+  <!-- CASH OUT -->
+  <div id="cashModal" class="modal hidden">
+    <div class="modal-card" style="width:min(420px,100%)">
+      <div id="cashAsk">
+        <div class="modal-head"><h2>Cash out</h2></div>
+        <p style="margin:0 0 8px">How many points would you like to cash out?</p>
+        <p class="sub" style="margin:0 0 10px">You have <b id="cashAvail">0</b> points.</p>
+        <input type="number" id="cashAmt" min="1" step="1" placeholder="Points">
+        <p id="cashErr" style="color:var(--accent);min-height:1.2em;margin:6px 0 10px"></p>
+        <div class="controls"><button id="cashGo" class="go">Cash out</button> <button id="cashCancel" class="secondary">Cancel</button></div>
+      </div>
+      <div id="cashDoneView" class="hidden" style="text-align:center">
+        <h2 style="font-size:1.4rem" id="cashDone"></h2>
+        <p class="sub" id="cashLeft"></p>
+        <button id="cashOk" class="go">OK</button>
+      </div>
+    </div>
+  </div>
 
   <!-- EDIT -->
   <div id="editModal" class="modal hidden">
@@ -819,6 +839,33 @@
   $('stopBtn').onclick = stop;
   $('doneBtn').onclick = complete;
   $('giveNow').onclick = () => { giveTask(false); };
+
+  /* ---------- Cash out ---------- */
+  function openCash() {
+    $('cashAvail').textContent = G.total;
+    $('cashAmt').value = ''; $('cashErr').textContent = '';
+    $('cashAsk').classList.remove('hidden'); $('cashDoneView').classList.add('hidden');
+    $('cashModal').classList.remove('hidden');
+    $('cashAmt').focus();
+  }
+  function closeCash() { $('cashModal').classList.add('hidden'); }
+  function doCash() {
+    const n = Number($('cashAmt').value);
+    if (G.total < 1) { $('cashErr').textContent = "You don't have any points to cash out yet."; return; }
+    if (!Number.isInteger(n) || n < 1) { $('cashErr').textContent = 'Enter a whole number of points, 1 or more.'; return; }
+    if (n > G.total) { $('cashErr').textContent = 'You only have ' + G.total + ' point' + (G.total === 1 ? '' : 's') + '.'; return; }
+    G.total -= n; saveGame(); renderStatus();
+    $('cashDone').textContent = 'You just cashed out ' + n + ' point' + (n === 1 ? '' : 's') + '.';
+    $('cashLeft').textContent = 'Remaining balance: ' + G.total + ' point' + (G.total === 1 ? '' : 's') + '.';
+    $('cashAsk').classList.add('hidden'); $('cashDoneView').classList.remove('hidden');
+  }
+  $('cashBtn').onclick = openCash;
+  $('cashGo').onclick = doCash;
+  $('cashCancel').onclick = closeCash;
+  $('cashOk').onclick = closeCash;
+  $('cashAmt').addEventListener('keydown', e => { if (e.key === 'Enter') doCash(); });
+  $('cashModal').addEventListener('pointerdown', e => { if (e.target === $('cashModal')) closeCash(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('cashModal').classList.contains('hidden')) closeCash(); });
 
   /* ---------- Go ---------- */
   if (G.running && !G.nextAt) scheduleNext();
