@@ -96,6 +96,7 @@
   </div>
 
   <div class="card"><h2>Recently completed</h2><div id="doneLog" class="sub">Nothing yet.</div></div>
+  <div class="card"><h2>Cash-outs</h2><div id="cashLog" class="sub">No cash-outs yet.</div></div>
 
   <!-- CASH OUT -->
   <div id="cashModal" class="modal hidden">
@@ -110,7 +111,8 @@
       </div>
       <div id="cashDoneView" class="hidden" style="text-align:center">
         <h2 style="font-size:1.4rem" id="cashDone"></h2>
-        <p class="sub" id="cashLeft"></p>
+        <p class="sub" id="cashLeft" style="margin-bottom:4px"></p>
+        <p class="sub" id="cashWhen"></p>
         <button id="cashOk" class="go">OK</button>
       </div>
     </div>
@@ -157,7 +159,8 @@
 
   /* ---------- Her personality: blunt and teasing that you have to do it at all; occasional faux damsel ---------- */
   // Every pool is a "shuffle bag": each line is used once before any line repeats. Bag state survives refreshes.
-  // Tokens: {F} {F2} = two different friends, {C} {C2} = two different coworkers (same token = same name within one message).
+  // Tokens: {F} = any friend (Linda, Ericka or RL); {S} {S2} = the two sisters (Ericka and RL, in random order); {C} {C2} = two different
+  // coworkers. Linda is from a separate friend group, so she is never paired with the sisters. Same token = same name within one message.
   // Repeatable 5-minute tasks are "dents" in a bigger job, so nothing here says the whole chore gets finished,
   // and nothing here makes the five minutes sound small.
   const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -226,7 +229,7 @@
     "{C} would never believe you do this.",
     "I told {F} you'd do this without complaining. Don't make me a liar.",
     "{F} thinks you've got it good. I agree.",
-    "{F} and {F2} want to know what you're up to. I told them: working for me.",
+    "{S} and {S2} want to know what you're up to. I told them: working for me.",
     "Imagine if {C} could see you right now.",
     "{F} bet me you wouldn't do it. I'm winning.",
     "I told {F} you'd say yes. You didn't even get a vote.",
@@ -239,21 +242,24 @@
     "{F} will hear about this at brunch.",
     "I only tell {F} the funny parts. This is a funny part.",
     "{F} said I'm too nice to you. I'm fixing that.", "{F} would pay to see this.", "{C} is going to love this story.",
-    "{F} and {F2} think I'm joking about this. I'm not.", "I told {C} you'd do whatever I ask. Don't make me a liar.",
+    "{S} and {S2} think I'm joking about this. I'm not.", "I told {C} you'd do whatever I ask. Don't make me a liar.",
     "{F} thinks you're a pushover. Prove her wrong. Or don't.", "{C} said no way you do chores. I said watch.",
     "I told {F} about the app. She thinks it's hilarious.", "{F} wants one of these for her house.",
     "{C2} asked if you really do this. I said yes.", "I read the last one out loud to {F}. She cried laughing.",
     "I told {C} I run this house. No argument.", "{F} asked if you'd say no. I said you never do.",
     "{C} bet you'd refuse. I'm collecting.", "I owe {F} an update on this.", "{F} is waiting for the report on how this goes.",
-    "{F} and {F2} want a full report.", "The group chat has been asking about you.", "The group chat is going to hear about this.",
+    "{S} and {S2} want a full report.", "The group chat has been asking about you.", "The group chat is going to hear about this.",
     "I tell {F} everything. You know that, right?", "{C} doesn't know yet. I'm thinking about it.",
     "{C} will never let you live this down.", "{F} says you're the best husband ever. Prove it.",
-    "I told {F} you're my favorite. At chores.", "{F} says you're lucky. I said I know."
+    "I told {F} you're my favorite. At chores.", "{F} says you're lucky. I said I know.",
+    "{S} and {S2} are sisters. Sisters share everything. Including this.",
+    "Whatever I tell {S}, {S2} hears by dinner. Sisters.",
+    "{S2} will hear about this from {S} before I even tell her."
   ];
   // Follow-up lines that push the embarrassment. Added to about half of the normal teases.
   const PUSHES = [
     "Should I tell {C}?", "Want me to tell {C}?", "I could send {F} a picture.", "{F} would love to hear about this.",
-    "I'll keep it between us. Maybe.", "I'm sure {F} and {F2} would love to know.", "Don't make me text {F}.",
+    "I'll keep it between us. Maybe.", "I'm sure {S} and {S2} would love to know.", "Don't make me text {F}.",
     "I could mention it at work.", "Should I add it to the group chat?", "I'm telling {C}.", "Don't tempt me to tell {C}.",
     "{C2} would love this story.", "I'm thinking of telling {F}. Convince me not to.", "Be careful. {C} might find out.",
     "I have {F}'s number. Just saying.", "Be nice, or {C} hears about this.", "Should I tell {F}? I want to tell {F}.",
@@ -262,7 +268,7 @@
     "Say the word and {C} hears everything.", "I'm one text away from telling {F}.", "This would be great at brunch with {F}.",
     "I could show {F} this app.", "I could show {C} this app. Just saying.", "{F} would never let you hear the end of it.",
     "Give me a reason to tell {C}.", "I'll tell {F}. I'll make it dramatic.", "I'll add details when I tell {C}.",
-    "I'll tell the story at the next dinner with {F} and {F2}.", "If {C} asks, I'll be honest.", "I'm not above telling {C}.",
+    "I'll tell the story at the next dinner with {S} and {S2}.", "If {C} asks, I'll be honest.", "I'm not above telling {C}.",
     "I'm not above telling {F}.", "Complain and {C} hears about it.", "One more word and I text {F}.",
     "Dinner with {F} is coming up. I have material.", "I have a long memory and {F}'s number.",
     "Everyone at work will hear about this. Slowly. Over time.", "I'm already composing the story for {C}.",
@@ -345,9 +351,9 @@
   ];
   const D_EXCUSE = [
     "{C} from work invited me to happy hour and I really, really want to go.",
-    "{F} and {F2} are getting dinner tonight and I'd hate to let them down.",
+    "{S} and {S2} are getting dinner tonight and I'd hate to let them down.",
     "I booked a pedicure weeks ago and they're so strict about cancellations.",
-    "{F}, {F2} and I are going to a movie and it's the only night we could all make it.",
+    "{S}, {S2} and I are going to a movie and it's the only night we could all make it.",
     "there's a sale ending tonight and I've been waiting for it all week.",
     "{F} had a rough day and needs a glass of wine and someone to talk to.",
     "{C}'s birthday drinks start soon and everyone will notice if I'm not there.",
@@ -358,7 +364,7 @@
     "my neighbor invited me for coffee and it would be rude to say no.",
     "I promised {F} I'd help her pick out an outfit and she's already waiting.",
     "my manicure is overdue and it's the only time they have.",
-    "{F} and {F2} want to try that new restaurant and they're already there.",
+    "{S} and {S2} want to try that new restaurant and they're already there.",
     "an old friend is in town for one night and I haven't seen her in forever.",
     "I have a spa gift card that expires tonight.",
     "{C} and {C2} are going out for karaoke and I promised I'd sing.",
@@ -366,9 +372,9 @@
     "my hair appointment got moved to today and I can't reschedule.",
     "there's a trunk show and the good stuff goes fast.",
     "I finally got invited to a cooking class and there's only one spot left.",
-    "{F} and {F2} are getting ice cream and I need to be there for moral support.",
+    "{S} and {S2} are getting ice cream and I need to be there for moral support.",
     "I volunteered to help {F} with something and I can't back out now.",
-    "it's an overdue girls' night with {F} and {F2} and they're counting on me.",
+    "it's an overdue girls' night with {S} and {S2} and they're counting on me.",
     "{F} is having a bad week and a few of us are planning a night out for her.",
     "{C} just texted that the team is heading out for drinks and I'm the only one missing.",
     "{F} is on her way to pick me up and I'm not even ready.",
@@ -376,7 +382,7 @@
     "{F} is celebrating a birthday and I promised to be there.",
     "{F} just got great news and we're celebrating.",
     "{C} invited the whole office to a barbecue and I said I'd bring something.",
-    "{F} and {F2} are doing a spin class and I already paid for it.",
+    "{S} and {S2} are doing a spin class and I already paid for it.",
     "the girls are going to a concert and I just got a ticket.",
     "I got invited to a paint-and-sip and it starts soon.",
     "there's a street fair downtown and I told {F} I'd go.",
@@ -386,7 +392,7 @@
     "there's a pottery class with {F} and it fills up fast.",
     "{C} is leaving the company and everyone's meeting for farewell drinks.",
     "my yoga class has a special guest tonight and I'd hate to miss it.",
-    "{F} and {F2} are playing trivia and they need a fourth.",
+    "{S} and {S2} are playing trivia and they need a fourth.",
     "I have a gift card for a facial and it expires soon.",
     "there's a new bakery that sells out early and {F} is saving me a spot.",
     "{F} just got a puppy and I promised to meet it.",
@@ -398,7 +404,7 @@
     "{F} is having a hard time and wants company for ice cream.",
     "the girls are doing karaoke and I'm in the opening act.",
     "I'm helping {F} pick paint colors for her house and she's waiting.",
-    "I signed up for a charity walk with {F} and {F2}.",
+    "I signed up for a charity walk with {S} and {S2}.",
     "my friend's art show is tonight and I told her I'd be there early.",
     "there's a wine and cheese night and I said I'd bring the cheese.",
     "{F} and I have a standing coffee date and I'm already late.",
@@ -426,7 +432,7 @@
     "I know I'm asking a lot of you today."
   ];
   const D_REWARD = [
-    "To thank you, I'll let you pick what I wear the next time I go out with {F} and {F2}.",
+    "To thank you, I'll let you pick what I wear the next time I go out with {S} and {S2}.",
     "As a thank-you, you get to choose my outfit for my next girls' night with {F}.",
     "In return, you can decide which shoes I wear tonight.",
     "Your reward: you get to pick the restaurant next time. From the three I've already chosen.",
@@ -471,7 +477,7 @@
     "You get to pick my shoes for tonight. I get to ignore you. Mostly.",
     "As thanks, you can pick what I wear to my next work event.",
     "As a reward, you can decide what I wear on our next dinner out.",
-    "I'll let you pick my outfit for brunch with {F} and {F2}.",
+    "I'll let you pick my outfit for brunch with {S} and {S2}.",
     "You get to help me get ready. That's the prize.",
     "You'll earn the right to choose my handbag for the weekend.",
     "Your reward: you choose my jewelry for the next girls' night.",
@@ -545,12 +551,13 @@
     return task.repeat ? (DENT[l] || 'make a dent in "' + n + '"') : l;
   }
 
-  const FRIENDS = ["Linda", "Roselynn", "Ericka"];
+  const FRIENDS = ["Linda", "Ericka", "RL"];
+  const SISTERS = ["Ericka", "RL"];
   const COWORKERS = ["Jenn", "Maile", "Mike", "Jake"];
   function namer() {
-    const f1 = draw('friend', FRIENDS), c1 = draw('cowork', COWORKERS);
-    const f2 = pick(FRIENDS.filter(x => x !== f1)), c2 = pick(COWORKERS.filter(x => x !== c1));
-    return s => s.replace(/\{F2\}/g, f2).replace(/\{F\}/g, f1).replace(/\{C2\}/g, c2).replace(/\{C\}/g, c1);
+    const f1 = draw('friend', FRIENDS), s1 = draw('sister', SISTERS), c1 = draw('cowork', COWORKERS);
+    const s2 = SISTERS.find(x => x !== s1), c2 = pick(COWORKERS.filter(x => x !== c1));
+    return s => s.replace(/\{S2\}/g, s2).replace(/\{S\}/g, s1).replace(/\{F\}/g, f1).replace(/\{C2\}/g, c2).replace(/\{C\}/g, c1);
   }
   function buildMessage(task, damsel) {
     const nm = namer();
@@ -596,6 +603,7 @@
     return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(sec).padStart(2, '0');
   };
   const clock = ms => new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const stamp = ms => new Date(ms).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + clock(ms);
 
   /* ---------- State (all saved in the browser, so refreshes change nothing) ---------- */
   store.set('hd_session', null); // old single-session format, no longer used
@@ -609,7 +617,7 @@
   tasks.forEach(t => { if (OLD_DETAILS.includes(t.details)) t.details = ''; });
   store.set('hd_tasks', tasks);
   const settings = Object.assign({ gapMin: 10, gapMax: 45 }, store.get('hd_settings', {}));
-  let G = Object.assign({ running: true, total: 0, results: [], current: null, nextAt: 0, rangeStart: 0, rangeEnd: 0, lastTaskId: null }, store.get('hd_game', {}));
+  let G = Object.assign({ running: true, total: 0, results: [], cashouts: [], current: null, nextAt: 0, rangeStart: 0, rangeEnd: 0, lastTaskId: null }, store.get('hd_game', {}));
   const saveTasks = () => store.set('hd_tasks', tasks);
   const saveSettings = () => store.set('hd_settings', { gapMin: settings.gapMin, gapMax: settings.gapMax });
   const saveGame = () => store.set('hd_game', G);
@@ -766,8 +774,15 @@
       : 'Nothing yet.';
   }
 
+  function renderCashLog() {
+    const last = (G.cashouts || []).slice(-10).reverse();
+    $('cashLog').innerHTML = last.length
+      ? last.map(c => `💰 ${c.pts} point${c.pts === 1 ? '' : 's'} — ${esc(stamp(c.at))}`).join('<br>')
+      : 'No cash-outs yet.';
+  }
+
   function render() {
-    renderStatus(); renderDoneLog();
+    renderStatus(); renderDoneLog(); renderCashLog();
     if (G.current) renderAssignment();
     else {
       $('assignCard').classList.add('hidden');
@@ -854,7 +869,11 @@
     if (G.total < 1) { $('cashErr').textContent = "You don't have any points to cash out yet."; return; }
     if (!Number.isInteger(n) || n < 1) { $('cashErr').textContent = 'Enter a whole number of points, 1 or more.'; return; }
     if (n > G.total) { $('cashErr').textContent = 'You only have ' + G.total + ' point' + (G.total === 1 ? '' : 's') + '.'; return; }
-    G.total -= n; saveGame(); renderStatus();
+    const at = Date.now();
+    G.total -= n;
+    G.cashouts = G.cashouts || []; G.cashouts.push({ pts: n, at }); if (G.cashouts.length > 200) G.cashouts.shift();
+    saveGame(); renderStatus(); renderCashLog();
+    $('cashWhen').textContent = 'Cashed out ' + stamp(at);
     $('cashDone').textContent = 'You just cashed out ' + n + ' point' + (n === 1 ? '' : 's') + '.';
     $('cashLeft').textContent = 'Remaining balance: ' + G.total + ' point' + (G.total === 1 ? '' : 's') + '.';
     $('cashAsk').classList.add('hidden'); $('cashDoneView').classList.remove('hidden');
