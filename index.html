@@ -136,6 +136,7 @@
       <div style="margin-top:8px"><label>Specifics (optional)</label>
         <textarea id="tDetails" placeholder="Both bins need to go to the curb. Don't forget the recycling."></textarea></div>
       <div style="margin-top:8px"><label style="display:inline-flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="tRepeat"> Repeatable 5-minute task (assigned again and again, never runs out)</label></div>
+      <div style="margin-top:6px"><label style="display:inline-flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="tDaily"> Comes back every day (one-time task that resets each morning)</label></div>
       <div style="margin-top:8px"><button id="addTask">Add task</button> <button id="addGeneric" class="secondary">Restore generic 5-min tasks</button></div>
 
       <h3>Tasks</h3>
@@ -548,7 +549,8 @@
   const cleanName = name => name.replace(/\s*\(.*?\)\s*/g, ' ').trim();
   const DENT = {
     "clean the garage": "make a dent in the garage", "do the dishes": "make a dent in the dishes",
-    "vacuum": "get some vacuuming done", "spot clean": "do some spot cleaning"
+    "vacuum": "get some vacuuming done", "spot clean": "do some spot cleaning",
+    "clean my office": "make a dent in cleaning my office"
   };
   function taskPhrase(task) {
     const n = cleanName(task.name), l = n.charAt(0).toLowerCase() + n.slice(1);
@@ -596,7 +598,8 @@
     { name: "Clean the garage (5 min)", details: "" },
     { name: "Do the dishes (5 min)", details: "" },
     { name: "Vacuum (5 min)", details: "" },
-    { name: "Spot clean (5 min)", details: "" }
+    { name: "Spot clean (5 min)", details: "" },
+    { name: "Clean my office (5 min)", details: "" }
   ];
   const uid = () => Math.random().toString(36).slice(2, 9);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -619,13 +622,20 @@
     "Pick a room and go over the floor properly, including edges.", "Find the nearest grime, spills or smudges and wipe them out."
   ];
   tasks.forEach(t => { if (OLD_DETAILS.includes(t.details)) t.details = ''; });
+  // One-time additions to an existing saved list.
+  if (!store.get('hd_added_v2', false)) {
+    if (!tasks.some(t => t.name === 'Clean my office (5 min)')) tasks.push({ id: uid(), name: 'Clean my office (5 min)', details: '', start: '', end: '', repeat: true, done: false });
+    if (!tasks.some(t => t.name === 'Go for a walk')) tasks.push({ id: uid(), name: 'Go for a walk', details: '', start: '07:00', end: '19:00', repeat: false, daily: true, done: false });
+    store.set('hd_added_v2', true);
+  }
   store.set('hd_tasks', tasks);
   const settings = Object.assign({ gapMin: 10, gapMax: 45 }, store.get('hd_settings', {}));
   let G = Object.assign({ running: true, total: 0, results: [], cashouts: [], current: null, nextAt: 0, rangeStart: 0, rangeEnd: 0, lastTaskId: null }, store.get('hd_game', {}));
   const saveTasks = () => store.set('hd_tasks', tasks);
   const saveSettings = () => store.set('hd_settings', { gapMin: settings.gapMin, gapMax: settings.gapMax });
   const saveGame = () => store.set('hd_game', G);
-  const pending = () => tasks.filter(t => !t.done);
+  const todayKey = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
+  const pending = () => tasks.filter(t => !t.done && t.doneDay !== todayKey());
 
   /* ---------- Game logic ---------- */
   function inWindow(t, d = new Date()) {
@@ -703,7 +713,7 @@
     G.total += pts;
     G.results.push({ name: task.name, ms, pts });
     if (G.results.length > 50) G.results.shift();
-    if (!task.repeat) { const t = tasks.find(x => x.id === task.id); if (t) { t.done = true; saveTasks(); } }
+    if (!task.repeat) { const t = tasks.find(x => x.id === task.id); if (t) { if (t.daily) t.doneDay = todayKey(); else t.done = true; saveTasks(); } }
     G.current = null;
     scheduleNext();
     render();
@@ -806,9 +816,12 @@
       else if (t.end) win = `Before ${t.end}`;
       else win = 'Any time';
       if (t.repeat) win += ' · 🔁 repeatable (5 min)';
+      if (t.daily) win += ' · 📅 comes back daily';
+      const skipped = t.doneDay === todayKey();
+      if (skipped) win += ' · ✔ done for today';
       if (t.done) win += ' · ✔ done';
-      return `<div class="task-item${t.done ? ' done' : ''}"><div><b>${esc(t.name)}</b><div class="meta">${win}</div>${t.details ? `<div class="meta">${esc(t.details)}</div>` : ''}</div>
-        <div class="btns">${t.done ? `<button class="secondary" data-redo="${t.id}">Redo</button>` : ''}<button class="secondary" data-del="${t.id}">Remove</button></div></div>`;
+      return `<div class="task-item${t.done || skipped ? ' done' : ''}"><div><b>${esc(t.name)}</b><div class="meta">${win}</div>${t.details ? `<div class="meta">${esc(t.details)}</div>` : ''}</div>
+        <div class="btns">${t.done ? `<button class="secondary" data-redo="${t.id}">Redo</button>` : skipped ? `<button class="secondary" data-undoday="${t.id}">Undo</button>` : `<button class="secondary" data-today="${t.id}">Done today</button>`}<button class="secondary" data-del="${t.id}">Remove</button></div></div>`;
     }).join('') || '<p class="sub">No tasks yet.</p>';
     saveTasks();
     renderStatus();
@@ -828,7 +841,8 @@
   $('addTask').onclick = () => {
     const name = $('tName').value.trim();
     if (!name) return $('tName').focus();
-    tasks.push({ id: uid(), name, details: $('tDetails').value.trim(), start: $('tStart').value, end: $('tEnd').value, repeat: $('tRepeat').checked, done: false });
+    tasks.push({ id: uid(), name, details: $('tDetails').value.trim(), start: $('tStart').value, end: $('tEnd').value, repeat: $('tRepeat').checked, daily: $('tDaily').checked && !$('tRepeat').checked, done: false });
+    $('tDaily').checked = false;
     $('tName').value = $('tDetails').value = $('tStart').value = $('tEnd').value = '';
     $('tRepeat').checked = false;
     renderTasks(); $('tName').focus();
@@ -841,9 +855,11 @@
     renderTasks();
   };
   $('taskList').onclick = e => {
-    const del = e.target.dataset.del, redo = e.target.dataset.redo;
+    const del = e.target.dataset.del, redo = e.target.dataset.redo, today = e.target.dataset.today, undoday = e.target.dataset.undoday;
     if (del) tasks = tasks.filter(t => t.id !== del);
     else if (redo) { const t = tasks.find(x => x.id === redo); if (t) t.done = false; }
+    else if (today) { const t = tasks.find(x => x.id === today); if (t) t.doneDay = todayKey(); }
+    else if (undoday) { const t = tasks.find(x => x.id === undoday); if (t) delete t.doneDay; }
     else return;
     renderTasks();
   };
