@@ -387,6 +387,55 @@
     "I'm already composing the story for {C}.",
     "{C2} and {C} would have a field day with this."
   ];
+  // Leverage lines: what she holds over him, or what he gets for being quick. Added to roughly a third of normal messages.
+  const LEVERAGE = [
+    "Or feel free to skip it and let me know how the couch is tonight.",
+    "Feel free to skip it. The couch is waiting.",
+    "Skip it and tell me how the couch feels tonight.",
+    "Skip it and the coffee beans go missing.",
+    "Do it and I won't hide your coffee beans.",
+    "Skip it and see what happens to your coffee in the morning.",
+    "Skip it and your favorite mug goes missing.",
+    "Skip it and the fancy coffee goes to the back of the cabinet. Behind everything.",
+    "Say no and I get the remote all week.",
+    "Skip it and I pick dinner every night this week.",
+    "Skip it and the good pillow is mine.",
+    "Skip it and your side of the bed gets a lot smaller.",
+    "Say no and I pick the thermostat for the week. Alone.",
+    "Skip it and I pick the music in the car. All week.",
+    "Skip it and I hide the good snacks.",
+    "Say no and I'll remember it the next time you want something.",
+    "Skip it and you owe me one. I collect.",
+    "Refuse and there's a second one on the list.",
+    "Don't do it and your weekend plans become my weekend plans.",
+    "Skip it and I'll have a very long list ready for Saturday.",
+    "If you skip it, I'm telling {F} you said no. She'll want details.",
+    "Complain and you can wear the apron. It's in the drawer.",
+    "Give me something to giggle about tonight.",
+    "Do it the first time I ask and you can do it in your regular clothes.",
+    "Do it the first time I ask and you don't have to wear the apron.",
+    "Do it fast and I'll be in a great mood tonight.",
+    "Do it without complaining and you pick the movie.",
+    "Do it right and I'll make your coffee tomorrow.",
+    "Do it fast and you get the good side of the couch tonight.",
+    "Do it fast and you get first pick of tonight's show.",
+    "Do it the first time I ask and I'll skip the commentary.",
+    "Make me smile and I might forget to assign another one.",
+    "Do it with a good attitude and I'll be nice at dinner.",
+    "Do it fast and you pick dinner.",
+    "Do it now and you keep the good pillow.",
+    "Do it and I'll refill the coffee beans myself.",
+    "Do it fast and I'll tell {F} what a great husband you are.",
+    "Do it without a fuss and I'll make you a coffee.",
+    "Do it before I ask twice and I'll leave you alone for the next hour.",
+    "Do it fast and the remote is yours tonight.",
+    "Do it and I'll tell {C} you're the best. Possibly.",
+    "Do it fast and you pick the music tonight.",
+    "Do it the first time I ask and I stop watching the clock. Maybe.",
+    "Do it right and tonight goes well for you.",
+    "Do it and I'll pretend I never had to ask.",
+    "Do it and you can pick which chore comes next. From my list."
+  ];
   // Repeatable 5-minute tasks: no minimizing. Comparisons to something worse are fine.
   const REPEAT_LINES = [
     "Five minutes. Start now.",
@@ -744,7 +793,8 @@
       if (task.details) text += ' ' + task.details;
       return { paragraph: text };
     }
-    return { lead: draw('opener', OPENERS), strict: nm(draw('tease', TEASES) + (Math.random() < 0.5 ? ' ' + draw('push', PUSHES) : '')) + (task.repeat ? ' ' + draw('repeat', REPEAT_LINES) : '') };
+    const r = Math.random();
+    return { lead: draw('opener', OPENERS), strict: nm(draw('tease', TEASES) + (r < 0.35 ? ' ' + draw('leverage', LEVERAGE) : r < 0.65 ? ' ' + draw('push', PUSHES) : '')) + (task.repeat ? ' ' + draw('repeat', REPEAT_LINES) : '') };
   }
 
   /* ---------- Built-in pictures ---------- */
