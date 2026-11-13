@@ -95,7 +95,11 @@
     <div class="big-points"><span id="livePoints">10</span> pts available</div>
     <p class="sub" id="elapsed"></p>
     <p id="taunt" style="font-style:italic;color:var(--accent)"></p>
-    <button id="doneBtn" class="ok">✔ Done!</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+      <button id="doneBtn" class="ok">✔ Done!</button>
+      <button id="doneDayBtn" class="secondary hidden">Done for Today</button>
+      <button id="swapBtn" class="secondary">Different Task</button>
+    </div>
     </div>
   </div>
 
@@ -142,10 +146,13 @@
       <div style="margin-top:8px"><label>Do it once every (weeks, optional)</label><input type="number" id="tEvery" min="1" step="1" style="max-width:140px" placeholder="e.g. 3"></div>
       <div style="margin-top:8px"><button id="addTask">Add task</button> <button id="addGeneric" class="secondary">Restore generic 5-min tasks</button></div>
 
-      <details id="ideas" style="margin-top:14px"><summary style="cursor:pointer;font-weight:600">💡 Ideas to add</summary><div id="ideaList"></div></details>
-
-      <h3>Tasks</h3>
+      <h3>Master list</h3>
+      <p class="sub">Everything Johanna can assign. Delete whatever doesn't apply to your house. Ideas stay out of the rotation until you add them.</p>
+      <h4 style="margin:12px 0 4px">In rotation (<span id="rotCount">0</span>)</h4>
       <div id="taskList"></div>
+      <h4 style="margin:16px 0 4px">💡 Ideas (<span id="ideaCount">0</span>)</h4>
+      <div style="margin:6px 0"><button id="addAllIdeas" class="secondary">Add all remaining ideas to rotation</button> <button id="restoreIdeas" class="secondary hidden">Restore deleted ideas</button></div>
+      <div id="ideaList"></div>
 
       <h3>Alert timing</h3>
       <div class="row">
@@ -560,6 +567,30 @@
     "It's one thing. Do the one thing.",
     "Start now. Points drop every two minutes."
   ];
+  const SWAP_LINES = [
+    "Fine. Here's a different one.",
+    "Trading it in doesn't get you out of work.",
+    "New task. Same you.",
+    "You're still doing something.",
+    "Swapped. Don't make it a habit.",
+    "You asked for a different one. Now do it.",
+    "I noticed you tried to dodge.",
+    "Different task. Same expectations.",
+    "Try not to ask twice.",
+    "Okay. Here's one that fits better. Probably.",
+    "Different task. The clock starts over.",
+    "I'll allow it. Once.",
+    "New one. Same attitude from me.",
+    "Don't get comfortable. Go."
+  ];
+  const SWAP_NONE = [
+    "Nothing else fits right now. This one stays.",
+    "I checked. There's nothing else. Do this one.",
+    "No other options. Back to work.",
+    "You're stuck with this one.",
+    "Nothing else available. Lucky me.",
+    "Nothing else fits. Keep going."
+  ];
   // While you work. Written to fit both one-off tasks and 5-minute dents, so no "finish" or "all done" wording.
   const TAUNTS = {
     high: [
@@ -932,7 +963,7 @@
   // One-time additions to an existing saved list.
   if (!store.get('hd_added_v2', false)) {
     if (!tasks.some(t => t.name === 'Clean my office (5 min)')) tasks.push({ id: uid(), name: 'Clean my office (5 min)', details: '', start: '', end: '', repeat: true, done: false });
-    if (!tasks.some(t => t.name === 'Go for a walk')) tasks.push({ id: uid(), name: 'Go for a walk', details: '', start: '07:00', end: '19:00', repeat: false, daily: true, done: false });
+    if (!tasks.some(t => t.name === 'Go for a walk')) tasks.push({ id: uid(), name: 'Go for a walk', details: '', start: '', end: '', repeat: false, daily: true, done: false });
     store.set('hd_added_v2', true);
   }
   if (!store.get('hd_added_v3', false)) {
@@ -941,6 +972,10 @@
     add('Refill the soap dispensers', { days: [2, 3, 4], everyDays: 7, phrase: 'refill the soap dispensers' });
     add('Refill the toilet paper', { days: [2, 3, 4], everyDays: 21, phrase: 'refill the toilet paper' });
     store.set('hd_added_v3', true);
+  }
+  if (!store.get('hd_added_v4', false)) { // the walk now follows the global Mon-Fri 8-4 hours
+    tasks.forEach(t => { if (t.name === 'Go for a walk' && t.start === '07:00' && t.end === '19:00') { t.start = ''; t.end = ''; } });
+    store.set('hd_added_v4', true);
   }
   store.set('hd_tasks', tasks);
   const settings = Object.assign({ gapMin: 10, gapMax: 45, activeStart: '08:00', activeEnd: '16:00', activeDays: [1, 2, 3, 4, 5] }, store.get('hd_settings', {}));
@@ -1064,7 +1099,7 @@
     assign(pickWeighted(ok)); return true;
   }
 
-  function assign(task) {
+  function assign(task, quiet) {
     const damsel = draw('mode', MODES) === 'damsel';
     const imgIdx = IMAGES.length ? IMAGES.indexOf(draw('img', IMAGES)) : -1;
     G.current = { task: { ...task }, assignedAt: Date.now(), tauntPts: null, tauntText: '', damsel, msg: buildMessage(task, damsel), imgIdx };
@@ -1072,19 +1107,34 @@
     saveGame();
     renderAssignment();
     renderStatus();
+    if (quiet) return;
     beep();
     const base = document.title; document.title = '🔔 ' + task.name;
     setTimeout(() => document.title = base, 8000);
     try { if ('Notification' in window && Notification.permission === 'granted') new Notification('Johanna has a task for you', { body: task.name }); } catch {}
   }
 
-  function complete() {
+  // "Different Task": swap the current assignment for another random one that fits right now. The timer starts over.
+  function swapTask() {
+    if (!G.current) return;
+    const cur = G.current.task.id;
+    const ok = pending().filter(t => t.id !== cur && inWindow(t) && dayOk(t));
+    if (!ok.length) {
+      G.current.tauntText = '“' + namer()(draw('swap-no', SWAP_NONE)) + '”'; G.current.tauntPts = pointsFor(Date.now() - G.current.assignedAt, G.current.task);
+      saveGame(); $('taunt').textContent = G.current.tauntText; return;
+    }
+    assign(pickWeighted(ok), true);
+    G.current.tauntText = '“' + namer()(draw('swap', SWAP_LINES)) + '”'; saveGame(); renderAssignment();
+  }
+
+  function complete(forToday) {
     if (!G.current) return;
     const { task, assignedAt } = G.current, ms = Date.now() - assignedAt, pts = pointsFor(ms, task);
     G.total += pts;
     G.results.push({ name: task.name, ms, pts });
     if (G.results.length > 50) G.results.shift();
     if (!task.repeat) { const t = tasks.find(x => x.id === task.id); if (t) { if (t.everyDays) { t.lastDone = Date.now(); t.target = null; } else if (t.daily) t.doneDay = todayKey(); else t.done = true; saveTasks(); } }
+    if (forToday === true) { const t = tasks.find(x => x.id === task.id); if (t) { t.doneDay = todayKey(); saveTasks(); } } // off today's list
     G.current = null;
     scheduleNext();
     render();
@@ -1150,6 +1200,7 @@
     $('assignLead').classList.toggle('hidden', para);
     $('assignName').classList.toggle('hidden', para);
     $('taunt').textContent = c.tauntText || '';
+    $('doneDayBtn').classList.toggle('hidden', !c.task.repeat);
     $('assignCard').classList.remove('hidden');
     $('waiting').classList.add('hidden');
   }
@@ -1201,9 +1252,10 @@
       if (skipped) win += ' · ✔ done for today';
       if (t.done) win += ' · ✔ done';
       return `<div class="task-item${t.done || skipped ? ' done' : ''}"><div><b>${esc(t.name)}</b><div class="meta">${win}</div>${t.details ? `<div class="meta">${esc(t.details)}</div>` : ''}</div>
-        <div class="btns">${t.done ? `<button class="secondary" data-redo="${t.id}">Redo</button>` : skipped ? `<button class="secondary" data-undoday="${t.id}">Undo</button>` : `<button class="secondary" data-today="${t.id}">Done today</button>`}<button class="secondary" data-del="${t.id}">Remove</button></div></div>`;
+        <div class="btns">${t.done ? `<button class="secondary" data-redo="${t.id}">Redo</button>` : skipped ? `<button class="secondary" data-undoday="${t.id}">Undo</button>` : `<button class="secondary" data-today="${t.id}">Done today</button>`}<button class="secondary" data-del="${t.id}">Delete</button></div></div>`;
     }).join('') || '<p class="sub">No tasks yet.</p>';
     saveTasks();
+    $('rotCount').textContent = tasks.length;
     renderStatus();
   }
   function openEdit() {
@@ -1224,7 +1276,7 @@
     const name = $('tName').value.trim();
     if (!name) return $('tName').focus();
     const micro = $('tMicro').checked, weeks = Math.floor(+$('tEvery').value), days = [...document.querySelectorAll('.tDay')].filter(c => c.checked).map(c => +c.value);
-    const t = { id: uid(), name, details: $('tDetails').value.trim(), start: $('tStart').value, end: $('tEnd').value, repeat: $('tRepeat').checked || micro, micro, daily: $('tDaily').checked && !$('tRepeat').checked && !micro, done: false };
+    const t = { id: uid(), name, details: $('tDetails').value.trim(), start: $('tStart').value, end: $('tEnd').value, repeat: $('tRepeat').checked || micro || /\b5[ -]?min/i.test(name), micro, daily: $('tDaily').checked && !$('tRepeat').checked && !micro, done: false };
     if (days.length) t.days = days;
     if (weeks >= 1 && !t.repeat) t.everyDays = weeks * 7;
     tasks.push(t);
@@ -1277,19 +1329,32 @@
       ['Donate a bag of stuff', 'donate a bag of stuff'], ['Dust the ceiling fans', 'dust the ceiling fans'], ['Clean out the freezer', 'clean out the freezer']
     ].map(([name, phrase]) => ({ name, phrase })) }
   ];
+  let gone = store.get('hd_ideas_gone', []);
+  const saveGone = () => store.set('hd_ideas_gone', gone);
+  const IDEA_NAMES = new Set(IDEAS.flatMap(g => g.items.map(i => i.name)));
+  const ideaToTask = it => Object.assign({ id: uid(), name: it.name, details: '', start: '', end: '', repeat: false, done: false }, it);
+  const remainingIdeas = () => IDEAS.map((g, gi) => ({ g, gi, rows: g.items.map((it, ii) => ({ it, ii })).filter(({ it }) => !tasks.some(t => t.name === it.name) && !gone.includes(it.name)) }));
   function renderIdeas() {
-    $('ideaList').innerHTML = IDEAS.map((g, gi) => `<h4 style="margin:12px 0 4px">${esc(g.group)}</h4>` + g.items.map((it, ii) => {
-      const have = tasks.some(t => t.name === it.name);
-      return `<div class="task-item"><div><b>${esc(it.name)}</b></div><div class="btns"><button class="secondary" data-idea="${gi}-${ii}"${have ? ' disabled' : ''}>${have ? 'Added' : 'Add'}</button></div></div>`;
-    }).join('')).join('');
+    let total = 0;
+    $('ideaList').innerHTML = remainingIdeas().map(({ g, gi, rows }) => {
+      total += rows.length;
+      return rows.length ? `<h5 style="margin:12px 0 2px;color:var(--muted)">${esc(g.group)}</h5>` + rows.map(({ it, ii }) =>
+        `<div class="task-item"><div><b>${esc(it.name)}</b></div><div class="btns"><button class="secondary" data-idea="${gi}-${ii}">Add</button><button class="secondary" data-idel="${gi}-${ii}">Delete</button></div></div>`).join('') : '';
+    }).join('') || '<p class="sub">No ideas left.</p>';
+    $('ideaCount').textContent = total; $('rotCount').textContent = tasks.length;
+    $('addAllIdeas').disabled = !total;
+    $('restoreIdeas').classList.toggle('hidden', !gone.length);
+    $('restoreIdeas').textContent = 'Restore deleted ideas (' + gone.length + ')';
   }
   $('ideaList').onclick = e => {
-    const k = e.target.dataset.idea; if (!k) return;
+    const add = e.target.dataset.idea, del = e.target.dataset.idel, k = add || del; if (!k) return;
     const [gi, ii] = k.split('-').map(Number), it = IDEAS[gi].items[ii];
-    if (tasks.some(t => t.name === it.name)) return;
-    tasks.push(Object.assign({ id: uid(), name: it.name, details: '', start: '', end: '', repeat: false, done: false }, it));
+    if (add) { if (!tasks.some(t => t.name === it.name)) tasks.push(ideaToTask(it)); }
+    else if (!gone.includes(it.name)) { gone.push(it.name); saveGone(); }
     renderTasks(); renderIdeas();
   };
+  $('addAllIdeas').onclick = () => { remainingIdeas().forEach(({ rows }) => rows.forEach(({ it }) => tasks.push(ideaToTask(it)))); renderTasks(); renderIdeas(); };
+  $('restoreIdeas').onclick = () => { gone = []; saveGone(); renderIdeas(); };
 
   $('addGeneric').onclick = () => {
     GENERIC.forEach(g => {
@@ -1299,7 +1364,7 @@
   };
   $('taskList').onclick = e => {
     const del = e.target.dataset.del, redo = e.target.dataset.redo, today = e.target.dataset.today, undoday = e.target.dataset.undoday;
-    if (del) tasks = tasks.filter(t => t.id !== del);
+    if (del) { const gt = tasks.find(t => t.id === del); if (gt && IDEA_NAMES.has(gt.name) && !gone.includes(gt.name)) { gone.push(gt.name); saveGone(); } tasks = tasks.filter(t => t.id !== del); }
     else if (redo) { const t = tasks.find(x => x.id === redo); if (t) t.done = false; }
     else if (today) { const t = tasks.find(x => x.id === today); if (t) t.doneDay = todayKey(); }
     else if (undoday) { const t = tasks.find(x => x.id === undoday); if (t) delete t.doneDay; }
@@ -1315,7 +1380,9 @@
 
   $('startBtn').onclick = start;
   $('stopBtn').onclick = stop;
-  $('doneBtn').onclick = complete;
+  $('doneBtn').onclick = () => complete(false);
+  $('doneDayBtn').onclick = () => complete(true);
+  $('swapBtn').onclick = swapTask;
   $('giveNow').onclick = () => { giveTask(false); };
 
   /* ---------- Cash out ---------- */
