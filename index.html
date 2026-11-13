@@ -977,6 +977,12 @@
     tasks.forEach(t => { if (t.name === 'Go for a walk' && t.start === '07:00' && t.end === '19:00') { t.start = ''; t.end = ''; } });
     store.set('hd_added_v4', true);
   }
+  if (!store.get('hd_added_v5', false)) { // three micro-tasks picked from the second batch of ideas
+    [['Fold the throw blankets', 'fold the throw blankets'], ['Straighten the dining chairs', 'straighten up the dining chairs'], ['Sort the mail', 'sort the mail']].forEach(([name, phrase]) => {
+      if (!tasks.some(t => t.name === name)) tasks.push({ id: uid(), name, details: '', start: '', end: '', repeat: true, micro: true, phrase, done: false });
+    });
+    store.set('hd_added_v5', true);
+  }
   store.set('hd_tasks', tasks);
   const settings = Object.assign({ gapMin: 10, gapMax: 45, activeStart: '08:00', activeEnd: '16:00', activeDays: [1, 2, 3, 4, 5] }, store.get('hd_settings', {}));
   let G = Object.assign({ running: true, total: 0, results: [], cashouts: [], current: null, nextAt: 0, rangeStart: 0, rangeEnd: 0, lastTaskId: null }, store.get('hd_game', {}));
