@@ -137,7 +137,12 @@
         <textarea id="tDetails" placeholder="Both bins need to go to the curb. Don't forget the recycling."></textarea></div>
       <div style="margin-top:8px"><label style="display:inline-flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="tRepeat"> Repeatable 5-minute task (assigned again and again, never runs out)</label></div>
       <div style="margin-top:6px"><label style="display:inline-flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="tDaily"> Comes back every day (one-time task that resets each morning)</label></div>
+      <div style="margin-top:6px"><label style="display:inline-flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="tMicro"> Micro-task: one quick thing, a couple of minutes (repeats, worth up to 5 points)</label></div>
+      <div style="margin-top:8px"><label>Only on these days (none checked = any day)</label><div id="tDays"></div></div>
+      <div style="margin-top:8px"><label>Do it once every (weeks, optional)</label><input type="number" id="tEvery" min="1" step="1" style="max-width:140px" placeholder="e.g. 3"></div>
       <div style="margin-top:8px"><button id="addTask">Add task</button> <button id="addGeneric" class="secondary">Restore generic 5-min tasks</button></div>
+
+      <details id="ideas" style="margin-top:14px"><summary style="cursor:pointer;font-weight:600">💡 Ideas to add</summary><div id="ideaList"></div></details>
 
       <h3>Tasks</h3>
       <div id="taskList"></div>
@@ -147,6 +152,12 @@
         <div><label>Min gap between alerts (min)</label><input type="number" id="gapMin" min="0" step="0.1"></div>
         <div><label>Max gap between alerts (min)</label><input type="number" id="gapMax" min="0" step="0.1"></div>
       </div>
+      <div class="row" style="margin-top:8px">
+        <div><label>Active from</label><input type="time" id="aStart"></div>
+        <div><label>Active until</label><input type="time" id="aEnd"></div>
+      </div>
+      <div style="margin-top:8px"><label>Active days</label><div id="aDays"></div></div>
+      <p class="sub">Johanna only gives out tasks during these hours and days. Give Task Now still works any time.</p>
 
       <h3>Score</h3>
       <button id="resetPoints" class="secondary">Reset points and history</button>
@@ -526,6 +537,29 @@
     "Make a dent. Timer's five.",
     "Make a dent. I'll check."
   ];
+  // Micro-tasks: one quick thing, smaller points.
+  const MICRO_LINES = [
+    "One thing. Go.",
+    "Pick one thing and take care of it.",
+    "No timer shown. Move anyway.",
+    "Quick one. Don't stretch it out.",
+    "Quick means quick.",
+    "Don't turn this into a project.",
+    "Fast points. Don't waste them.",
+    "A couple of minutes, not ten.",
+    "Don't overthink it.",
+    "I'm watching the clock on this one.",
+    "Points drop faster on these.",
+    "These points go fast. So should you.",
+    "Two minutes and the points start dropping.",
+    "Go now. It's a quick one.",
+    "Don't make a quick one slow.",
+    "Points drop every two minutes on this one.",
+    "If this takes long, that's on you.",
+    "Fast is the whole point.",
+    "It's one thing. Do the one thing.",
+    "Start now. Points drop every two minutes."
+  ];
   // While you work. Written to fit both one-off tasks and 5-minute dents, so no "finish" or "all done" wording.
   const TAUNTS = {
     high: [
@@ -813,8 +847,8 @@
     "Such a gentleman. A speedy one would be even better.", "I'm so thankful. The points are less thankful every minute."
   ];
 
-  const tauntFor = (p, damsel) => namer()(damsel ? draw('d-taunt', D_TAUNTS)
-    : p >= 8 ? draw('t-high', TAUNTS.high) : p >= 4 ? draw('t-mid', TAUNTS.mid) : p >= 1 ? draw('t-low', TAUNTS.low) : draw('t-zero', TAUNTS.zero));
+  const tauntFor = (p0, damsel, task) => { const p = task && task.micro ? p0 * 2 : p0; return namer()(damsel ? draw('d-taunt', D_TAUNTS)
+    : p >= 8 ? draw('t-high', TAUNTS.high) : p >= 4 ? draw('t-mid', TAUNTS.mid) : p >= 1 ? draw('t-low', TAUNTS.low) : draw('t-zero', TAUNTS.zero)); };
 
   // How the task is worded inside a damsel paragraph. A repeatable 5-minute task is a dent in a bigger job.
   const cleanName = name => name.replace(/\s*\(.*?\)\s*/g, ' ').trim();
@@ -825,6 +859,7 @@
   };
   function taskPhrase(task) {
     const n = cleanName(task.name), l = n.charAt(0).toLowerCase() + n.slice(1);
+    if (task.phrase) return task.phrase;
     return task.repeat ? (DENT[l] || 'make a dent in "' + n + '"') : l;
   }
 
@@ -840,14 +875,14 @@
     const nm = namer();
     if (damsel) {
       let text = draw('d-template', D_TEMPLATES)(taskPhrase(task), draw('d-excuse', D_EXCUSE), draw('d-open', D_OPEN), draw('d-thanks', D_THANKS));
-      if (task.repeat) text += ' ' + draw('d-five', D_FIVE);
+      if (task.repeat && !task.micro) text += ' ' + draw('d-five', D_FIVE);
       text += ' ' + draw('d-big', D_BIGFAVOR) + ' ' + draw('d-reward', D_REWARD) + ' ' + draw('d-sly', D_SLY);
       text = nm(text);
       if (task.details) text += ' ' + task.details;
       return { paragraph: text };
     }
     const r = Math.random();
-    return { lead: draw('opener', OPENERS), strict: nm(draw('tease', TEASES) + (r < 0.45 ? ' ' + draw('leverage', LEVERAGE) : r < 0.7 ? ' ' + draw('push', PUSHES) : '')) + (task.repeat ? ' ' + draw('repeat', REPEAT_LINES) : '') };
+    return { lead: draw('opener', OPENERS), strict: nm(draw('tease', TEASES) + (r < 0.45 ? ' ' + draw('leverage', LEVERAGE) : r < 0.7 ? ' ' + draw('push', PUSHES) : '')) + (task.micro ? ' ' + draw('micro', MICRO_LINES) : task.repeat ? ' ' + draw('repeat', REPEAT_LINES) : '') };
   }
 
   /* ---------- Built-in pictures ---------- */
@@ -900,14 +935,70 @@
     if (!tasks.some(t => t.name === 'Go for a walk')) tasks.push({ id: uid(), name: 'Go for a walk', details: '', start: '07:00', end: '19:00', repeat: false, daily: true, done: false });
     store.set('hd_added_v2', true);
   }
+  if (!store.get('hd_added_v3', false)) {
+    const add = (name, extra) => { if (!tasks.some(t => t.name === name)) tasks.push(Object.assign({ id: uid(), name, details: '', start: '', end: '', repeat: false, done: false }, extra)); };
+    add('Clean up one thing', { repeat: true, micro: true, phrase: 'clean up one thing' });
+    add('Refill the soap dispensers', { days: [2, 3, 4], everyDays: 7, phrase: 'refill the soap dispensers' });
+    add('Refill the toilet paper', { days: [2, 3, 4], everyDays: 21, phrase: 'refill the toilet paper' });
+    store.set('hd_added_v3', true);
+  }
   store.set('hd_tasks', tasks);
-  const settings = Object.assign({ gapMin: 10, gapMax: 45 }, store.get('hd_settings', {}));
+  const settings = Object.assign({ gapMin: 10, gapMax: 45, activeStart: '08:00', activeEnd: '16:00', activeDays: [1, 2, 3, 4, 5] }, store.get('hd_settings', {}));
   let G = Object.assign({ running: true, total: 0, results: [], cashouts: [], current: null, nextAt: 0, rangeStart: 0, rangeEnd: 0, lastTaskId: null }, store.get('hd_game', {}));
   const saveTasks = () => store.set('hd_tasks', tasks);
-  const saveSettings = () => store.set('hd_settings', { gapMin: settings.gapMin, gapMax: settings.gapMax });
+  const saveSettings = () => store.set('hd_settings', { gapMin: settings.gapMin, gapMax: settings.gapMax, activeStart: settings.activeStart, activeEnd: settings.activeEnd, activeDays: settings.activeDays });
   const saveGame = () => store.set('hd_game', G);
   const todayKey = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
   const pending = () => tasks.filter(t => !t.done && t.doneDay !== todayKey());
+  const DAYN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayStart = ms => { const d = new Date(ms); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
+  const addDays = (ms, n) => { const d = new Date(ms); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n).getTime(); };
+  const hm = str => { const [h, m] = String(str || '0:0').split(':').map(Number); return [h || 0, m || 0]; };
+  // The hours Johanna works: one window per active day.
+  function activeWindow(dayMs) {
+    const d = new Date(dayMs), [sh, sm] = hm(settings.activeStart), [eh, em] = hm(settings.activeEnd);
+    return { s: new Date(d.getFullYear(), d.getMonth(), d.getDate(), sh, sm).getTime(), e: new Date(d.getFullYear(), d.getMonth(), d.getDate(), eh, em).getTime() };
+  }
+  const dayIsActive = ms => !settings.activeDays || !settings.activeDays.length || settings.activeDays.includes(new Date(ms).getDay());
+  function inActive(ms) {
+    if (!settings.activeDays || !settings.activeDays.length) return true;
+    if (!dayIsActive(ms)) return false;
+    const w = activeWindow(dayStart(ms)); return w.e > w.s ? (ms >= w.s && ms < w.e) : true;
+  }
+  // Move a time into the next active window (random offset after opening so it isn't always on the dot).
+  function clampToActive(t, lo, hi) {
+    if (!settings.activeDays || !settings.activeDays.length) return t;
+    for (let i = 0; i < 15; i++) {
+      const day = addDays(dayStart(t), i), w = activeWindow(day);
+      if (!dayIsActive(day) || w.e <= w.s || t >= w.e) continue;
+      if (t >= w.s) return t;
+      return Math.min(w.s + rand(lo, hi) * 60000, w.e - 60000);
+    }
+    return t;
+  }
+  function nextActiveStart(t) {
+    for (let i = 0; i < 15; i++) { const day = addDays(dayStart(t), i), w = activeWindow(day); if (dayIsActive(day) && w.e > w.s && w.s > t) return w.s; }
+    return t;
+  }
+  const dayTag = (ms, now = Date.now()) => dayStart(ms) === dayStart(now) ? '' : DAYN[new Date(ms).getDay()] + ' ';
+  // Day-of-week rules and "once every N days" schedules. A scheduled task picks a random allowed day in the week it comes due.
+  const weekStart = ms => { const d = dayStart(ms); return addDays(d, -((new Date(d).getDay() + 6) % 7)); }; // Monday of that week
+  function planTarget(t, todayMs) {
+    const allowed = d => !t.days || !t.days.length || t.days.includes(new Date(d).getDay());
+    const weekly = t.everyDays % 7 === 0;
+    let from = t.lastDone ? (weekly ? addDays(weekStart(t.lastDone), t.everyDays) : addDays(dayStart(t.lastDone), t.everyDays)) : (weekly ? weekStart(todayMs) : todayMs);
+    let c = [];
+    for (let tries = 0; tries < 2 && !c.length; tries++, from = addDays(from, 7)) {
+      for (let i = 0; i < 7; i++) { const d = addDays(from, i); if (allowed(d) && (t.lastDone || d >= todayMs)) c.push(d); }
+    }
+    t.target = c.length ? pick(c) : from; saveTasks();
+  }
+  function dayOk(t, ms = Date.now()) {
+    if (t.days && t.days.length && !t.days.includes(new Date(ms).getDay())) return false;
+    if (t.everyDays) { const today = dayStart(ms); if (t.target == null) planTarget(t, today); return today >= t.target; }
+    return true;
+  }
+  const pickWeighted = arr => pick(arr.flatMap(t => t.everyDays ? [t, t, t] : [t])); // scheduled tasks show up on their day
 
   /* ---------- Game logic ---------- */
   function inWindow(t, d = new Date()) {
@@ -920,16 +1011,24 @@
     return a <= b ? (m >= a && m <= b) : (m >= a || m <= b); // overnight window
   }
   // Repeatable tasks are 5-minute jobs, so they get a 5-minute grace period before points start dropping.
-  const pointsFor = (ms, task) => Math.max(0, 10 - Math.floor(Math.max(0, ms - (task && task.repeat ? 300000 : 0)) / 300000));
+  const maxPts = task => task && task.micro ? 5 : 10;
+  const pointsFor = (ms, task) => task && task.micro ? Math.max(0, 5 - Math.floor(Math.max(0, ms) / 120000)) // micro: up to 5, minus 1 every 2 minutes
+    : Math.max(0, 10 - Math.floor(Math.max(0, ms - (task && task.repeat ? 300000 : 0)) / 300000));
 
   function scheduleNext() {
     const lo = Math.max(0, +settings.gapMin || 0), hi = Math.max(lo, +settings.gapMax || lo);
     const now = Date.now();
-    G.nextAt = now + rand(lo, hi) * 60000;
+    G.nextAt = clampToActive(now + rand(lo, hi) * 60000, lo, hi);
     // Show a fixed 20-minute window that contains the real alert time at a random spot, so it doesn't give the time away.
-    const maxBack = Math.min(20 * 60000, G.nextAt - now);
-    G.rangeStart = G.nextAt - rand(0, maxBack);
-    G.rangeEnd = G.rangeStart + 20 * 60000;
+    const maxBack = Math.min(20 * 60000, Math.max(0, G.nextAt - now));
+    let rs = G.nextAt - rand(0, maxBack), re;
+    if (settings.activeDays && settings.activeDays.length) {
+      const w = activeWindow(dayStart(G.nextAt));
+      if (rs < w.s) rs = w.s;
+      re = rs + 20 * 60000;
+      if (re > w.e) { re = w.e; rs = Math.max(w.s, re - 20 * 60000); }
+    } else re = rs + 20 * 60000;
+    G.rangeStart = rs; G.rangeEnd = re;
     saveGame();
   }
 
@@ -954,7 +1053,7 @@
   }
 
   function eligible() {
-    const ok = pending().filter(t => inWindow(t));
+    const ok = pending().filter(t => inWindow(t) && dayOk(t));
     const fresh = ok.filter(t => t.id !== G.lastTaskId); // avoid the same task twice in a row
     return fresh.length ? fresh : ok;
   }
@@ -962,7 +1061,7 @@
     if (!G.running || G.current) return false;
     const ok = eligible();
     if (!ok.length) { if (!silent) alert('No task is available at this time of day.'); return false; }
-    assign(pick(ok)); return true;
+    assign(pickWeighted(ok)); return true;
   }
 
   function assign(task) {
@@ -985,7 +1084,7 @@
     G.total += pts;
     G.results.push({ name: task.name, ms, pts });
     if (G.results.length > 50) G.results.shift();
-    if (!task.repeat) { const t = tasks.find(x => x.id === task.id); if (t) { if (t.daily) t.doneDay = todayKey(); else t.done = true; saveTasks(); } }
+    if (!task.repeat) { const t = tasks.find(x => x.id === task.id); if (t) { if (t.everyDays) { t.lastDone = Date.now(); t.target = null; } else if (t.daily) t.doneDay = todayKey(); else t.done = true; saveTasks(); } }
     G.current = null;
     scheduleNext();
     render();
@@ -1009,18 +1108,20 @@
   function tick() {
     const now = Date.now();
     if (G.running && !G.current && now >= G.nextAt) {
-      if (!giveTask(true)) G.nextAt = now + 15000; // nothing allowed right now; check again shortly
+      if (!inActive(now)) scheduleNext(); // outside Johanna's hours: push the next alert into the next work window
+      else if (!giveTask(true)) G.nextAt = now + 15000; // nothing allowed right now; check again shortly
     }
     if (G.running && G.current) {
       const ms = now - G.current.assignedAt, p = pointsFor(ms, G.current.task);
       $('livePoints').textContent = p;
-      $('elapsed').textContent = 'Elapsed: ' + fmt(ms) + (G.current.task.repeat ? ' (5 min grace before points drop)' : '');
-      if (G.current.tauntPts !== p && !(p === 10 && G.current.tauntPts === null && ms < 60000)) {
-        G.current.tauntPts = p; G.current.tauntText = '“' + tauntFor(p, G.current.damsel) + '”';
+      $('elapsed').textContent = 'Elapsed: ' + fmt(ms) + (G.current.task.micro ? ' (points drop every 2 min)' : G.current.task.repeat ? ' (5 min grace before points drop)' : '');
+      if (G.current.tauntPts !== p && !(p === maxPts(G.current.task) && G.current.tauntPts === null && ms < 60000)) {
+        G.current.tauntPts = p; G.current.tauntText = '“' + tauntFor(p, G.current.damsel, G.current.task) + '”';
         $('taunt').textContent = G.current.tauntText; saveGame();
       }
     }
     renderStatus(now);
+    if (!G.current && !$('waiting').classList.contains('hidden')) $('waiting').textContent = waitingText();
   }
 
   /* ---------- Rendering ---------- */
@@ -1030,7 +1131,7 @@
     $('sState').style.color = G.running ? 'var(--ok)' : 'var(--accent)';
     $('sPoints').textContent = G.total;
     $('sRemain').textContent = pend.some(t => t.repeat) ? '∞' : pend.length;
-    $('sNext').textContent = !G.running ? '--' : G.current ? 'in progress' : (now >= G.rangeEnd ? 'any moment' : clock(G.rangeStart) + ' – ' + clock(G.rangeEnd));
+    $('sNext').textContent = !G.running ? '--' : G.current ? 'in progress' : (now >= G.rangeEnd ? 'any moment' : dayTag(G.rangeStart, now) + clock(G.rangeStart) + ' – ' + clock(G.rangeEnd));
     $('startBtn').disabled = G.running;
     $('stopBtn').disabled = !G.running;
     $('giveNow').disabled = !G.running || !!G.current;
@@ -1067,15 +1168,19 @@
       : 'No cash-outs yet.';
   }
 
+  function waitingText() {
+    return !G.running ? '⏸ Stopped. Press Start when you\'re ready.'
+      : !pending().length ? '✅ No tasks left. Add more under Edit.'
+      : !inActive(Date.now()) ? '🌙 Johanna is off the clock. Back ' + dayTag(nextActiveStart(Date.now())) + clock(nextActiveStart(Date.now())) + '.'
+      : '😌 Relax... for now. Johanna will let you know.';
+  }
   function render() {
     renderStatus(); renderDoneLog(); renderCashLog();
     if (G.current) renderAssignment();
     else {
       $('assignCard').classList.add('hidden');
       $('waiting').classList.remove('hidden');
-      $('waiting').textContent = !G.running ? '⏸ Stopped. Press Start when you\'re ready.'
-        : !pending().length ? '✅ No tasks left. Add more under Edit.'
-        : '😌 Relax... for now. Johanna will let you know.';
+      $('waiting').textContent = waitingText();
     }
   }
 
@@ -1087,7 +1192,10 @@
       else if (t.start) win = `After ${t.start}`;
       else if (t.end) win = `Before ${t.end}`;
       else win = 'Any time';
-      if (t.repeat) win += ' · 🔁 repeatable (5 min)';
+      if (t.micro) win += ' · ⚡ micro, repeats (up to 5 pts)';
+      else if (t.repeat) win += ' · 🔁 repeatable (5 min)';
+      if (t.days && t.days.length) win += ' · ' + [1, 2, 3, 4, 5, 6, 0].filter(d => t.days.includes(d)).map(d => DAYN[d]).join('/') + ' only';
+      if (t.everyDays) win += ' · once every ' + (t.everyDays % 7 === 0 ? (t.everyDays / 7) + (t.everyDays === 7 ? ' week' : ' weeks') : t.everyDays + ' days') + (t.lastDone ? ' (last: ' + new Date(t.lastDone).toLocaleDateString([], { month: 'short', day: 'numeric' }) + ')' : '');
       if (t.daily) win += ' · 📅 comes back daily';
       const skipped = t.doneDay === todayKey();
       if (skipped) win += ' · ✔ done for today';
@@ -1100,7 +1208,9 @@
   }
   function openEdit() {
     $('gapMin').value = settings.gapMin; $('gapMax').value = settings.gapMax;
-    renderTasks();
+    $('aStart').value = settings.activeStart; $('aEnd').value = settings.activeEnd;
+    document.querySelectorAll('.aDay').forEach(c => c.checked = settings.activeDays.includes(+c.value));
+    renderTasks(); renderIdeas();
     $('editModal').classList.remove('hidden');
   }
   function closeEdit() { $('editModal').classList.add('hidden'); render(); }
@@ -1113,13 +1223,74 @@
   $('addTask').onclick = () => {
     const name = $('tName').value.trim();
     if (!name) return $('tName').focus();
-    tasks.push({ id: uid(), name, details: $('tDetails').value.trim(), start: $('tStart').value, end: $('tEnd').value, repeat: $('tRepeat').checked, daily: $('tDaily').checked && !$('tRepeat').checked, done: false });
-    $('tDaily').checked = false;
+    const micro = $('tMicro').checked, weeks = Math.floor(+$('tEvery').value), days = [...document.querySelectorAll('.tDay')].filter(c => c.checked).map(c => +c.value);
+    const t = { id: uid(), name, details: $('tDetails').value.trim(), start: $('tStart').value, end: $('tEnd').value, repeat: $('tRepeat').checked || micro, micro, daily: $('tDaily').checked && !$('tRepeat').checked && !micro, done: false };
+    if (days.length) t.days = days;
+    if (weeks >= 1 && !t.repeat) t.everyDays = weeks * 7;
+    tasks.push(t);
+    $('tDaily').checked = false; $('tMicro').checked = false; $('tEvery').value = ''; document.querySelectorAll('.tDay').forEach(c => c.checked = false);
     $('tName').value = $('tDetails').value = $('tStart').value = $('tEnd').value = '';
     $('tRepeat').checked = false;
-    renderTasks(); $('tName').focus();
+    renderTasks(); renderIdeas(); $('tName').focus();
   };
   $('tName').addEventListener('keydown', e => { if (e.key === 'Enter') $('addTask').click(); });
+  /* ---------- Day boxes, active hours, ideas ---------- */
+  const dayBoxes = cls => [1, 2, 3, 4, 5, 6, 0].map(d => `<label style="display:inline-flex;gap:4px;align-items:center;margin-right:10px;color:var(--ink)"><input type="checkbox" class="${cls}" value="${d}"> ${DAYN[d]}</label>`).join('');
+  $('tDays').innerHTML = dayBoxes('tDay'); $('aDays').innerHTML = dayBoxes('aDay');
+  function saveActive() {
+    settings.activeStart = $('aStart').value || '08:00'; settings.activeEnd = $('aEnd').value || '16:00';
+    settings.activeDays = [...document.querySelectorAll('.aDay')].filter(c => c.checked).map(c => +c.value);
+    saveSettings(); if (G.running && !G.current) scheduleNext();
+  }
+  $('aStart').onchange = $('aEnd').onchange = saveActive;
+  $('aDays').onchange = saveActive;
+
+  // Ideas to choose from. Micro-tasks are one quick thing; dents are 5-minute repeatable jobs; scheduled ones come back every N weeks; one-offs run once.
+  const IDEAS = [
+    { group: 'Micro-tasks (one quick thing, repeats, up to 5 points)', items: [
+      ['Clear one counter', 'clear off one counter'], ['Wipe down one surface', 'wipe down one surface'], ['Put away one pile', 'put away one pile of stuff'],
+      ['Wipe the bathroom sink', 'wipe down the bathroom sink'], ['Straighten the shoes by the door', 'straighten up the shoes by the door'],
+      ['Wipe the stovetop', 'wipe down the stovetop'], ['Empty one trash can', 'empty one of the trash cans'], ["Refill the dog's water", "refill the dog's water"],
+      ['Wipe the bathroom mirror', 'wipe down the bathroom mirror'], ['Put away the dry dishes', 'put away the dry dishes'], ['Wipe the kitchen table', 'wipe down the kitchen table'],
+      ['Straighten the couch', 'straighten up the couch'], ['Gather the stray cups', 'gather up the stray cups'], ['Clean the dryer lint trap', 'clean out the dryer lint trap'],
+      ['Water the plants', 'water the plants'], ['Hang up the jackets', 'hang up the jackets by the door'], ['Wipe the light switches', 'wipe down the light switches'],
+      ['Wipe the microwave', 'wipe out the microwave'], ['Sweep one room', 'sweep one room'], ['Take out the kitchen trash', 'take out the kitchen trash']
+    ].map(([name, phrase]) => ({ name, phrase, repeat: true, micro: true })) },
+    { group: '5-minute dents (repeat forever)', items: [
+      ['Declutter the entryway (5 min)', 'make a dent in the entryway'], ['Tidy the living room (5 min)', 'make a dent in the living room'],
+      ['Clean the bathroom (5 min)', 'make a dent in the bathroom'], ['Dust (5 min)', 'get some dusting done'], ['Fold laundry (5 min)', 'make a dent in the laundry'],
+      ['Clean the car interior (5 min)', 'make a dent in cleaning the car'], ['Yard tidying (5 min)', 'make a dent in the yard'], ['Organize a drawer (5 min)', 'make a dent in the drawers'],
+      ['Clean out the fridge (5 min)', 'make a dent in the fridge'], ['Wipe baseboards (5 min)', 'make a dent in the baseboards'],
+      ['Declutter the bedroom (5 min)', 'make a dent in the bedroom'], ['Wipe cabinets (5 min)', 'make a dent in the cabinets']
+    ].map(([name, phrase]) => ({ name, phrase, repeat: true })) },
+    { group: 'Scheduled (comes back every few weeks, on a random day)', items: [
+      ['Change the bed sheets', 'change the sheets', 7], ['Water the houseplants properly', 'water the houseplants', 7], ['Wash the dog bowls', 'wash the dog bowls', 7],
+      ['Descale the coffee maker', 'descale the coffee maker', 28], ['Clean the washing machine', 'clean the washing machine', 28],
+      ['Wipe the door handles and light switches', 'wipe down the door handles', 14], ['Wash the car', 'wash the car', 14], ['Clean the microwave', 'clean the microwave', 14],
+      ['Wipe down the fridge shelves', 'wipe down the fridge shelves', 28], ['Sweep the porch', 'sweep the porch', 14],
+      ['Replace the HVAC filter', 'replace the HVAC filter', 84], ['Test the smoke detectors', 'test the smoke detectors', 84]
+    ].map(([name, phrase, everyDays]) => ({ name, phrase, everyDays })) },
+    { group: 'One-offs (done once)', items: [
+      ['Replace a burnt-out light bulb', 'replace a burnt-out light bulb'], ['Clean out the junk drawer', 'clean out the junk drawer'], ['Organize the garage shelves', 'organize the garage shelves'],
+      ['Wash the windows', 'wash the windows'], ['Clean out the pantry', 'clean out the pantry'], ['Fix one thing on the house list', 'fix one thing on the house list'],
+      ['Clean the oven', 'clean the oven'], ['Wash the shower curtain', 'wash the shower curtain'], ['Clean behind the couch', 'clean behind the couch'],
+      ['Donate a bag of stuff', 'donate a bag of stuff'], ['Dust the ceiling fans', 'dust the ceiling fans'], ['Clean out the freezer', 'clean out the freezer']
+    ].map(([name, phrase]) => ({ name, phrase })) }
+  ];
+  function renderIdeas() {
+    $('ideaList').innerHTML = IDEAS.map((g, gi) => `<h4 style="margin:12px 0 4px">${esc(g.group)}</h4>` + g.items.map((it, ii) => {
+      const have = tasks.some(t => t.name === it.name);
+      return `<div class="task-item"><div><b>${esc(it.name)}</b></div><div class="btns"><button class="secondary" data-idea="${gi}-${ii}"${have ? ' disabled' : ''}>${have ? 'Added' : 'Add'}</button></div></div>`;
+    }).join('')).join('');
+  }
+  $('ideaList').onclick = e => {
+    const k = e.target.dataset.idea; if (!k) return;
+    const [gi, ii] = k.split('-').map(Number), it = IDEAS[gi].items[ii];
+    if (tasks.some(t => t.name === it.name)) return;
+    tasks.push(Object.assign({ id: uid(), name: it.name, details: '', start: '', end: '', repeat: false, done: false }, it));
+    renderTasks(); renderIdeas();
+  };
+
   $('addGeneric').onclick = () => {
     GENERIC.forEach(g => {
       if (!tasks.some(t => t.name === g.name)) tasks.push({ id: uid(), name: g.name, details: g.details, start: '', end: '', repeat: true, done: false });
@@ -1133,7 +1304,7 @@
     else if (today) { const t = tasks.find(x => x.id === today); if (t) t.doneDay = todayKey(); }
     else if (undoday) { const t = tasks.find(x => x.id === undoday); if (t) delete t.doneDay; }
     else return;
-    renderTasks();
+    renderTasks(); renderIdeas();
   };
   $('gapMin').onchange = () => { settings.gapMin = $('gapMin').value; saveSettings(); };
   $('gapMax').onchange = () => { settings.gapMax = $('gapMax').value; saveSettings(); };
