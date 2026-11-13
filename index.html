@@ -886,7 +886,7 @@
   const DENT = {
     "clean the garage": "make a dent in the garage", "do the dishes": "make a dent in the dishes",
     "vacuum": "get some vacuuming done", "spot clean": "do some spot cleaning",
-    "clean my office": "make a dent in cleaning my office"
+    "clean your office": "make a dent in cleaning your office"
   };
   function taskPhrase(task) {
     const n = cleanName(task.name), l = n.charAt(0).toLowerCase() + n.slice(1);
@@ -937,7 +937,7 @@
     { name: "Do the dishes (5 min)", details: "" },
     { name: "Vacuum (5 min)", details: "" },
     { name: "Spot clean (5 min)", details: "" },
-    { name: "Clean my office (5 min)", details: "" }
+    { name: "Clean your office (5 min)", details: "" }
   ];
   const uid = () => Math.random().toString(36).slice(2, 9);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -962,7 +962,7 @@
   tasks.forEach(t => { if (OLD_DETAILS.includes(t.details)) t.details = ''; });
   // One-time additions to an existing saved list.
   if (!store.get('hd_added_v2', false)) {
-    if (!tasks.some(t => t.name === 'Clean my office (5 min)')) tasks.push({ id: uid(), name: 'Clean my office (5 min)', details: '', start: '', end: '', repeat: true, done: false });
+    if (!tasks.some(t => t.name === 'Clean my office (5 min)' || t.name === 'Clean your office (5 min)')) tasks.push({ id: uid(), name: 'Clean your office (5 min)', details: '', start: '', end: '', repeat: true, done: false });
     if (!tasks.some(t => t.name === 'Go for a walk')) tasks.push({ id: uid(), name: 'Go for a walk', details: '', start: '', end: '', repeat: false, daily: true, done: false });
     store.set('hd_added_v2', true);
   }
@@ -983,6 +983,7 @@
     });
     store.set('hd_added_v5', true);
   }
+  tasks.forEach(t => { if (t.name === 'Clean my office (5 min)') t.name = 'Clean your office (5 min)'; });
   store.set('hd_tasks', tasks);
   const settings = Object.assign({ gapMin: 10, gapMax: 45, activeStart: '08:00', activeEnd: '16:00', activeDays: [1, 2, 3, 4, 5] }, store.get('hd_settings', {}));
   let G = Object.assign({ running: true, total: 0, results: [], cashouts: [], current: null, nextAt: 0, rangeStart: 0, rangeEnd: 0, lastTaskId: null }, store.get('hd_game', {}));
