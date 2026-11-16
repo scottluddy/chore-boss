@@ -50,6 +50,39 @@
     .assign img { max-height:55vh; }
   }
   .assign .emoji { font-size:5rem; }
+  /* The Yard */
+  .assign.yard { background:#3b0707; border-color:#ff2a2a; color:#fff; animation:pop .4s ease, redpulse 1.1s ease-in-out infinite alternate; }
+  @keyframes redpulse { from { box-shadow:0 0 0 0 rgba(255,40,40,0); } to { box-shadow:0 0 36px 4px rgba(255,40,40,.85); } }
+  .assign.yard .lead { color:#ff9a9a; }
+  .assign.yard .big-points { color:#ff6b6b; }
+  .assign.yard .sub { color:#ffc9c9; }
+  .assign.yard #taunt { color:#ffd0d0 !important; }
+  .yard-banner { font-size:1.5rem; font-weight:900; letter-spacing:.06em; color:#ff4d4d; animation:yblink .9s steps(2, start) infinite; }
+  @keyframes yblink { to { visibility:hidden; } }
+  .yard-steps { text-align:left; background:rgba(0,0,0,.28); border-radius:10px; padding:8px 12px; margin:8px 0; font-size:.92rem; }
+  .yard-steps ol { margin:4px 0 0 18px; padding:0; }
+  #yardNum { font-size:2.2rem; letter-spacing:.15em; }
+  .yard-note { background:#ffd54a; color:#3a2a00; padding:4px 8px; border-radius:8px; font-weight:700; margin:6px 0; }
+  .yard-bank { font-weight:700; margin:6px 0; }
+  .yard-bank.red { color:#ff6b6b; }
+  .yard-notice { background:#3b0707; color:#fff; border:2px solid #ff2a2a; font-weight:700; text-align:center; }
+  .assign.yard input[type=text] { background:#fff; color:#111; }
+  .wall { position:relative; width:100%; aspect-ratio:1/1; max-height:min(800px, calc(100vh - 150px)); background:#1d0000; border-radius:12px; overflow:hidden; }
+  .wall .face { position:absolute; aspect-ratio:1; animation:fbounce .8s ease-in-out infinite alternate; }
+  .wall .face.a1 { animation-name:fshake; animation-timing-function:linear; }
+  .wall .face.a2 { animation-name:fzoom; }
+  .assign .wall .face img, .wall .face img { width:100%; height:100%; min-height:0; max-height:none; object-fit:cover; border-radius:50%; border:3px solid #fff; display:block; }
+  @keyframes fbounce { from { transform:translateY(0) rotate(var(--r)); } to { transform:translateY(-14%) rotate(calc(var(--r) * -1)); } }
+  @keyframes fshake { 0% { transform:translateX(0) rotate(var(--r)); } 25% { transform:translateX(-7%) rotate(calc(var(--r) * -1)); } 50% { transform:translateX(0) rotate(var(--r)); } 75% { transform:translateX(7%) rotate(calc(var(--r) * -1)); } 100% { transform:translateX(0) rotate(var(--r)); } }
+  @keyframes fzoom { from { transform:scale(.88) rotate(var(--r)); } to { transform:scale(1.12) rotate(calc(var(--r) * -1)); } }
+  .wall .bub { position:absolute; background:#fff; color:#a00; font-weight:800; padding:4px 10px; border-radius:14px; font-size:.95rem; animation:ybub 5s infinite; white-space:nowrap; z-index:2; }
+  @keyframes ybub { 0%, 55%, 100% { opacity:0; transform:scale(.4); } 62%, 90% { opacity:1; transform:scale(1); } }
+  .yard-overlay { position:fixed; inset:0; z-index:60; background:#240000; display:flex; align-items:center; justify-content:center; }
+  .yard-overlay .wall { position:absolute; inset:0; width:auto; aspect-ratio:auto; max-height:none; border-radius:0; }
+  .yo-text { position:relative; z-index:3; text-align:center; color:#fff; text-shadow:0 2px 14px #000, 0 0 30px #000; padding:16px; }
+  #yoBig { font-size:clamp(2rem, 9vw, 5rem); font-weight:900; }
+  #yoSub { font-size:clamp(1rem, 3.5vw, 1.6rem); font-weight:700; margin:6px 0 14px; }
+
   .assign h3 { font-size:1.5rem; margin:6px 0; }
   .lead { color:var(--accent); font-weight:600; }
   .big-points { font-size:2.4rem; font-weight:700; color:var(--ok); }
@@ -70,6 +103,8 @@
     <button id="editBtn" class="secondary">✎ Edit</button>
   </div>
 
+  <div id="yardNotice" class="card yard-notice hidden">🚨 The yard is coming this week. I won't say when.</div>
+
   <div class="card status">
     <div class="stat"><b id="sState">--</b><span>status</span></div>
     <div class="stat"><b id="sPoints">0</b><span>total points</span></div>
@@ -79,6 +114,7 @@
       <button id="startBtn" class="go">▶ Start</button>
       <button id="stopBtn" class="danger">■ Stop</button>
       <button id="giveNow" class="secondary">Give Task Now</button>
+      <button id="testYard" class="secondary">Test Yard</button>
       <button id="cashBtn">💰 Cash out</button>
     </div>
   </div>
@@ -88,6 +124,7 @@
   <div id="assignCard" class="card assign hidden">
     <div id="assignImgWrap" class="pic"></div>
     <div class="txt">
+    <div id="yardBanner" class="yard-banner hidden">🚨 THE YARD 🚨</div>
     <div class="lead" id="assignLead"></div>
     <h3 id="assignName"></h3>
     <p id="assignStrict" style="font-weight:600"></p>
@@ -95,12 +132,46 @@
     <div class="big-points"><span id="livePoints">10</span> pts available</div>
     <p class="sub" id="elapsed"></p>
     <p id="taunt" style="font-style:italic;color:var(--accent)"></p>
+    <div id="yardPanel" class="hidden">
+      <div id="yardTest" class="yard-note hidden">TEST YARD: nothing is charged or scored.</div>
+      <div class="yard-steps">
+        <div>Your number: <b id="yardNum"></b></div>
+        <ol>
+          <li>Write the number on a piece of paper.</li>
+          <li>BEFORE photo: wide shot from the back door, paper in frame.</li>
+          <li>Do the yard.</li>
+          <li>AFTER photo: wide shot, same spot, same angle, paper in frame.</li>
+          <li>Send both photos and the number to Claude.</li>
+        </ol>
+      </div>
+      <div id="yardMsg" class="sub"></div>
+      <div id="yardBank" class="yard-bank"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:6px 0">
+        <button id="yardHead">Heading out</button>
+        <button id="yardPhotos" class="hidden">Photos sent</button>
+        <button id="yardReject" class="secondary hidden">Photos rejected: back out</button>
+      </div>
+      <div id="yardAfter" class="hidden" style="text-align:left;margin:8px 0">
+        <div>Detention: type this <b id="yardNeed"></b> times (<span id="yardDetCount">0</span> done):</div>
+        <p style="font-weight:700;margin:4px 0" id="yardSentence"></p>
+        <input type="text" id="yardDetIn" autocomplete="off" autocapitalize="sentences" autocorrect="off" spellcheck="false" placeholder="Type it exactly. No pasting.">
+        <div style="margin-top:8px">Unlock code from Claude:</div>
+        <input type="text" id="yardCode" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="4 digits" style="max-width:140px">
+        <span id="yardCodeMsg" class="sub"></span>
+        <div id="yardHint" class="sub"></div>
+      </div>
+    </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
       <button id="doneBtn" class="ok">✔ Done!</button>
       <button id="doneDayBtn" class="secondary hidden">Done for Today</button>
       <button id="swapBtn" class="secondary">Different Task</button>
     </div>
     </div>
+  </div>
+
+  <div id="yardOverlay" class="yard-overlay hidden">
+    <div id="yoWall" class="wall"></div>
+    <div class="yo-text"><div id="yoBig"></div><div id="yoSub"></div><button id="yoClose" class="secondary">Fine.</button></div>
   </div>
 
   <div class="card"><h2>Recently completed</h2><div id="doneLog" class="sub">Nothing yet.</div></div>
@@ -165,6 +236,7 @@
       </div>
       <div style="margin-top:8px"><label>Active days</label><div id="aDays"></div></div>
       <p class="sub">Johanna only gives out tasks during these hours and days. Give Task Now still works any time.</p>
+      <div style="margin-top:8px"><label style="display:inline-flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="yardOn"> The Yard: once a week around lunch, with harsh rules</label></div>
 
       <h3>Score</h3>
       <button id="resetPoints" class="secondary">Reset points and history</button>
@@ -985,10 +1057,10 @@
   }
   tasks.forEach(t => { if (t.name === 'Clean my office (5 min)') t.name = 'Clean your office (5 min)'; });
   store.set('hd_tasks', tasks);
-  const settings = Object.assign({ gapMin: 10, gapMax: 45, activeStart: '08:00', activeEnd: '16:00', activeDays: [1, 2, 3, 4, 5] }, store.get('hd_settings', {}));
+  const settings = Object.assign({ gapMin: 10, gapMax: 45, activeStart: '08:00', activeEnd: '16:00', activeDays: [1, 2, 3, 4, 5], yardOn: true }, store.get('hd_settings', {}));
   let G = Object.assign({ running: true, total: 0, results: [], cashouts: [], current: null, nextAt: 0, rangeStart: 0, rangeEnd: 0, lastTaskId: null }, store.get('hd_game', {}));
   const saveTasks = () => store.set('hd_tasks', tasks);
-  const saveSettings = () => store.set('hd_settings', { gapMin: settings.gapMin, gapMax: settings.gapMax, activeStart: settings.activeStart, activeEnd: settings.activeEnd, activeDays: settings.activeDays });
+  const saveSettings = () => store.set('hd_settings', { gapMin: settings.gapMin, gapMax: settings.gapMax, activeStart: settings.activeStart, activeEnd: settings.activeEnd, activeDays: settings.activeDays, yardOn: settings.yardOn !== false });
   const saveGame = () => store.set('hd_game', G);
   const todayKey = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
   const pending = () => tasks.filter(t => !t.done && t.doneDay !== todayKey());
@@ -1040,7 +1112,8 @@
     if (t.everyDays) { const today = dayStart(ms); if (t.target == null) planTarget(t, today); return today >= t.target; }
     return true;
   }
-  const pickWeighted = arr => pick(arr.flatMap(t => t.everyDays ? [t, t, t] : [t])); // scheduled tasks show up on their day
+  const dirtyRe = /toilet|shower|drain|garage|trash|oven|grill|scoop|gutter|fridge|lint|disposal|vent|mop|sweep/i;
+  const pickWeighted = arr => pick(arr.flatMap(t => Array((t.everyDays ? 3 : 1) * (G.afterYard && dirtyRe.test(t.name) ? 4 : 1)).fill(t))); // scheduled tasks show up on their day; dirty ones right after the yard
 
   /* ---------- Game logic ---------- */
   function inWindow(t, d = new Date()) {
@@ -1054,11 +1127,12 @@
   }
   // Repeatable tasks are 5-minute jobs, so they get a 5-minute grace period before points start dropping.
   const maxPts = task => task && task.micro ? 5 : 10;
-  const pointsFor = (ms, task) => task && task.micro ? Math.max(0, 5 - Math.floor(Math.max(0, ms) / 120000)) // micro: up to 5, minus 1 every 2 minutes
+  const pointsFor = (ms, task) => task && task.yard ? Math.max(0, 10 - Math.floor(Math.max(0, ms) / 120000)) // the yard: -1 every 2 minutes
+    : task && task.micro ? Math.max(0, 5 - Math.floor(Math.max(0, ms) / 120000)) // micro: up to 5, minus 1 every 2 minutes
     : Math.max(0, 10 - Math.floor(Math.max(0, ms - (task && task.repeat ? 300000 : 0)) / 300000));
 
-  function scheduleNext() {
-    const lo = Math.max(0, +settings.gapMin || 0), hi = Math.max(lo, +settings.gapMax || lo);
+  function scheduleNext(fixedMin) {
+    const lo = fixedMin != null ? fixedMin : Math.max(0, +settings.gapMin || 0), hi = fixedMin != null ? fixedMin : Math.max(lo, +settings.gapMax || lo);
     const now = Date.now();
     G.nextAt = clampToActive(now + rand(lo, hi) * 60000, lo, hi);
     // Show a fixed 20-minute window that contains the real alert time at a random spot, so it doesn't give the time away.
@@ -1110,7 +1184,7 @@
     const damsel = draw('mode', MODES) === 'damsel';
     const imgIdx = IMAGES.length ? IMAGES.indexOf(draw('img', IMAGES)) : -1;
     G.current = { task: { ...task }, assignedAt: Date.now(), tauntPts: null, tauntText: '', damsel, msg: buildMessage(task, damsel), imgIdx };
-    G.lastTaskId = task.id;
+    G.lastTaskId = task.id; G.afterYard = false;
     saveGame();
     renderAssignment();
     renderStatus();
@@ -1123,11 +1197,11 @@
 
   // "Different Task": swap the current assignment for another random one that fits right now. The timer starts over.
   function swapTask() {
-    if (!G.current) return;
+    if (!G.current || G.current.task.yard) return;
     const cur = G.current.task.id;
     const ok = pending().filter(t => t.id !== cur && inWindow(t) && dayOk(t));
     if (!ok.length) {
-      G.current.tauntText = '“' + namer()(draw('swap-no', SWAP_NONE)) + '”'; G.current.tauntPts = pointsFor(Date.now() - G.current.assignedAt, G.current.task);
+      G.current.tauntText = '“' + namer()(draw('swap-no', SWAP_NONE)) + '”'; G.current.tauntPts = pointsFor(elapsedMs(G.current), G.current.task);
       saveGame(); $('taunt').textContent = G.current.tauntText; return;
     }
     assign(pickWeighted(ok), true);
@@ -1136,7 +1210,8 @@
 
   function complete(forToday) {
     if (!G.current) return;
-    const { task, assignedAt } = G.current, ms = Date.now() - assignedAt, pts = pointsFor(ms, task);
+    if (G.current.task.yard) return completeYard();
+    const { task } = G.current, ms = elapsedMs(G.current), pts = adj(pointsFor(ms, task));
     G.total += pts;
     G.results.push({ name: task.name, ms, pts });
     if (G.results.length > 50) G.results.shift();
@@ -1156,6 +1231,7 @@
   }
   function stop() {
     if (!G.running) return;
+    if (G.current && G.current.task.yard && !G.current.task.test) return; // no escaping the yard
     if (G.current && !confirm("Stop? Her current task is dropped (it stays on your list).")) return;
     G.running = false; G.current = null;
     saveGame();
@@ -1164,14 +1240,21 @@
 
   function tick() {
     const now = Date.now();
+    if (yardOn() && !Y.target && !(G.current && G.current.task.yard)) planYard(now);
+    if (G.running && yardOn() && Y.target && now >= Y.target) {
+      const w = lunchWin(dayStart(Y.target));
+      if (now >= w.e) planYard(now); // missed the lunch window: try again another day
+      else if (!G.current && now >= w.s && inActive(now)) assignYard(false);
+    }
     if (G.running && !G.current && now >= G.nextAt) {
       if (!inActive(now)) scheduleNext(); // outside Johanna's hours: push the next alert into the next work window
       else if (!giveTask(true)) G.nextAt = now + 15000; // nothing allowed right now; check again shortly
     }
-    if (G.running && G.current) {
-      const ms = now - G.current.assignedAt, p = pointsFor(ms, G.current.task);
-      $('livePoints').textContent = p;
-      $('elapsed').textContent = 'Elapsed: ' + fmt(ms) + (G.current.task.micro ? ' (points drop every 2 min)' : G.current.task.repeat ? ' (5 min grace before points drop)' : '');
+    if (G.running && G.current && G.current.task.yard) tickYard(now);
+    else if (G.running && G.current) {
+      const ms = elapsedMs(G.current, now), p = pointsFor(ms, G.current.task);
+      $('livePoints').textContent = adj(p);
+      $('elapsed').textContent = 'Elapsed: ' + fmt(ms) + (G.current.task.micro ? ' (points drop every 2 min)' : G.current.task.repeat ? ' (5 min grace before points drop)' : '') + (hangover() ? ' · Yard hangover: half points today' : '');
       if (G.current.tauntPts !== p && !(p === maxPts(G.current.task) && G.current.tauntPts === null && ms < 60000)) {
         G.current.tauntPts = p; G.current.tauntText = '“' + tauntFor(p, G.current.damsel, G.current.task) + '”';
         $('taunt').textContent = G.current.tauntText; saveGame();
@@ -1179,6 +1262,313 @@
     }
     renderStatus(now);
     if (!G.current && !$('waiting').classList.contains('hidden')) $('waiting').textContent = waitingText();
+  }
+
+
+  /* ---------- The Yard ---------- */
+  // Once a week, around lunch, Johanna assigns the yard. It has its own rules:
+  //  - points drop 1 per 2 min; after zero, 1 BANKED point per 5 min (starting at 25 min); cover charge of 3 banked points when assigned
+  //  - no swapping, no Done for Today; before/after photo proof is checked in the Claude chat, which gives a 4-digit unlock code
+  //  - Done also needs detention lines (3, or 5 past 20 min, or 10 past 30 min); rejected photos mean going back out with a fresh number
+  //  - the next task comes about 5 minutes later (dirty ones favored) and every other task pays half for the rest of that day
+  const YARD_ID = '__yard__', YARD_LUNCH = ['11:30', '13:00'];
+  let Y = Object.assign({ target: 0, count: 0, hangoverDay: null }, store.get('hd_yard', {}));
+  const saveY = () => store.set('hd_yard', Y);
+  const yardOn = () => settings.yardOn !== false;
+  const hangover = () => Y.hangoverDay === todayKey();
+  const adj = p => hangover() ? Math.floor(p / 2) : p;
+  const elapsedMs = (c, now = Date.now()) => (c.stopAt || now) - c.assignedAt - (c.pausedMs || 0);
+  const yardUnlock = ch => String((Math.imul(Number(ch) ^ 0x5bd1, 2654435761) >>> 0) % 9000 + 1000);
+  const newChallenge = () => String(1000 + Math.floor(Math.random() * 9000));
+  const lunchWin = dayMs => { const d = new Date(dayMs), [sh, sm] = hm(YARD_LUNCH[0]), [eh, em] = hm(YARD_LUNCH[1]); return { s: new Date(d.getFullYear(), d.getMonth(), d.getDate(), sh, sm).getTime(), e: new Date(d.getFullYear(), d.getMonth(), d.getDate(), eh, em).getTime() }; };
+  // Pick a random active day this week (or next) and a random minute inside the lunch window.
+  function planYard(now = Date.now()) {
+    const mk = base => { const out = []; for (let i = 0; i < 7; i++) { const d = addDays(base, i); if (dayIsActive(d) && lunchWin(d).e > now + 60000) out.push(d); } return out; };
+    let c = mk(weekStart(now)); if (!c.length) c = mk(addDays(weekStart(now), 7));
+    const w = lunchWin(pick(c)), lo = Math.max(w.s, now + 60000), hi = w.e - 60000;
+    Y.target = lo + Math.random() * Math.max(0, hi - lo); saveY();
+  }
+
+  const YARD_TITLES = [
+    "Poop Patrol, Unpaid Intern",
+    "Dog Doo Duty: Reporting for Shame",
+    "Scott, Official Scooper of Dog Mess",
+    "Johanna's Personal Pooper-Scooper Boy",
+    "The Dog Poops. You Scoop. That's Your Place.",
+    "Backyard Butler (No Tips)",
+    "Man vs. Yard (The Yard Is Winning)",
+    "Today's Special: Your Dignity, Scooped",
+    "Employee of the Month, Dog Doo Division",
+    "Sentenced to the Yard",
+    "Grown Man, Meet Yard",
+    "Scoop. Gag. Repeat.",
+    "The Dog's Assistant",
+    "Scott Draws the Short Straw (It Was Rigged)",
+    "Husband Duty: Grade Disgusting",
+    "Yard Boy, Reporting for Humiliation",
+    "Johanna's Favorite Show: You, With a Scooper",
+    "The Dog Is Your Boss Today",
+    "Doody Duty, With Feeling",
+    "Dog Butt Cleanup Crew: You",
+    "Please Hold: Dignity Is Out Back",
+    "You Wanted a Different Task. You Got This One.",
+    "The Yard Has Been Waiting For You",
+    "Scoop Troop Leader (Troop Size: 1)"
+  ];
+  const YARD_LEADS = [
+    "The yard.",
+    "It's yard day.",
+    "You knew this was coming.",
+    "The notice wasn't a joke.",
+    "Lunch is over. The yard isn't.",
+    "Don't look at me like that.",
+    "Yes. Now.",
+    "It's your turn.",
+    "I told you it was coming.",
+    "This is the one you hate."
+  ];
+  const YARD_LINES = [
+    "I know you hate this one. That's why it's yours.",
+    "There's no swap button for this one.",
+    "The dog doesn't care how you feel about it. Neither do I.",
+    "Gloves are by the door. Bags are in the drawer. Don't make me find them.",
+    "You've been dodging this all week. Today it's yours.",
+    "I'm telling {F} you're finally doing the yard.",
+    "Wear shoes you don't care about.",
+    "I'm not asking nicely this time.",
+    "No weather excuses. Put on shoes.",
+    "Photos before and after. I'll be checking.",
+    "I'll know if you skip a spot.",
+    "Don't gag. It makes it take longer.",
+    "You'll hate every minute. Good.",
+    "I picked lunch on purpose. You're welcome.",
+    "Wide shots. I want to see the whole yard.",
+    "I'm timing you. The points drop fast. Then I start charging.",
+    "I told {C} you'd do it without whining. Prove me right.",
+    "You can swap other tasks. Not this one.",
+    "This is what the dog's been working on all week.",
+    "{F} would've done this without complaining."
+  ];
+  const YARD_DAMSEL = [
+    "I'd do it myself, but I just did my nails and I'd hate to ruin them. You're so good at it, which is exactly why it's yours. I know it's a huge favor. If you do it, I'll remember. If you don't, I'll remember that too.",
+    "I have a call with {F} in ten minutes and I can't smell like that. Would you please take care of the yard? You're the only one I trust with it. I know it's a big ask. It's also not optional.",
+    "I wore white today and I'm not risking it. Could you handle the yard for me? I'd be so grateful. Not grateful enough to do it myself, but grateful.",
+    "{C} might stop by and I can't have the yard looking like that. Could you take care of it? Please? You're so much better at this than I am. Mostly because I refuse.",
+    "I'd love to help, but I really can't, and also I won't. Would you do the yard? Photos before and after, please. You know how I am.",
+    "I'd rather not see it up close, so wide photos from the door, please. You're my hero. Hero means you scoop."
+  ];
+  const YARD_TAUNTS = {"high": ["Gloves. Bags. Go.", "The clock is already running.", "Photos first. Then go.", "Don't just stand there.", "Number on paper. Photo. Move.", "You can't swap this one.", "Every two minutes costs you a point."], "mid": ["Points are dropping. The smell isn't.", "Keep going. I'm not impressed yet.", "That's a lot of points gone for scooping.", "Don't skip a spot.", "I can wait. You can't afford to.", "Slow. The dog is faster at making it than you are at cleaning it."], "low": ["Almost out of points. Then I start charging.", "The bank is next. You know that.", "One more point and it comes out of your pocket.", "Hurry up or the bank pays for it."], "zero": ["You're paying for this one out of your bank now.", "The bank is open. I'm withdrawing.", "Zero points means I start charging.", "I'll check. You know I'll check.", "No weather excuses. Put on shoes.", "Cha-ching. That one's mine.", "Every five minutes I take another point. Take your time.", "I told you it would cost you."]};
+  const DETENTION = [
+    "I am Johanna's yard boy and I scoop with pride.",
+    "The dog is a better man than I am and I clean up after him.",
+    "I will never say no to Johanna again.",
+    "I love scooping the yard more than anything.",
+    "I do not pick my chores. Johanna picks them.",
+    "I will do the yard the first time I am asked.",
+    "I asked for the yard and Johanna said yes.",
+    "Johanna is always right and the yard is always mine.",
+    "I am sorry I made Johanna ask twice.",
+    "My wife assigns, I scoop, and I say thank you.",
+    "Thank you, Johanna, for the yard.",
+    "I am the dog's valet and it is an honor.",
+    "Scooping is my favorite hobby and I told everyone so.",
+    "I wash my hands twice because Johanna said so.",
+    "I would pay money to scoop this yard again.",
+    "I am the happiest man alive when I am scooping.",
+    "The dog trained me and Johanna approved.",
+    "I am not too good to scoop and I never was.",
+    "I scoop because I am told to and I am grateful.",
+    "My wife is a genius and I am her scooper."
+  ];
+  const YARD_NAGS = [
+    "She's buzzing again. Tap Heading out.",
+    "Still here. Still buzzing. Tap Heading out.",
+    "Tap Heading out. The buzzing is free. The points aren't.",
+    "I can do this all day. Tap Heading out."
+  ];
+  const YARD_REJECT = [
+    "Rejected. Back out. Fresh number, fresh before photo.",
+    "I saw a miss. Go back out.",
+    "Not good enough. Again.",
+    "You missed a spot. I know you did."
+  ];
+  const WALL_TAUNTS = [
+    "HA!",
+    "HAHAHA",
+    "look at him go",
+    "the yard!",
+    "scoop scoop",
+    "poor Scott",
+    "hehehe",
+    "he hates this",
+    "bring gloves",
+    "pooper scooper!",
+    "he actually has to",
+    "hahaha oh no"
+  ];
+  const OV_ASSIGN = [
+    "Johanna and friends can't stop laughing.",
+    "Everyone knows. Everyone is laughing.",
+    "Your audience has arrived.",
+    "No swapping. No escape. Just laughing."
+  ];
+  const OV_WIN = [
+    "Wash your hands. Twice.",
+    "Johanna is telling everyone.",
+    "Look at him. He actually did it.",
+    "Go shower. Johanna says so."
+  ];
+
+  function yardBuzz(long) {
+    try {
+      unlockMedia(); const ctx = audioCtx; if (!ctx) return;
+      const t0 = ctx.currentTime, dur = long ? 1.6 : 0.7;
+      [110, 116].forEach(f => {
+        const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sawtooth'; o.frequency.value = f; o.connect(g); g.connect(ctx.destination);
+        g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.35, t0 + 0.05); g.gain.setValueAtTime(0.35, t0 + dur - 0.2); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        o.start(t0); o.stop(t0 + dur);
+      });
+    } catch {}
+  }
+  function ching() {
+    try {
+      unlockMedia(); const ctx = audioCtx; if (!ctx) return;
+      [1200, 1800].forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f; o.connect(g); g.connect(ctx.destination);
+        const t0 = ctx.currentTime + i * 0.12; g.gain.setValueAtTime(0.3, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.5); o.start(t0); o.stop(t0 + 0.5);
+      });
+    } catch {}
+  }
+
+  // A crowd of laughing Johannas, made from the built-in pictures.
+  function buildWall(el, n, big) {
+    el.innerHTML = '';
+    if (!IMAGES.length) { el.textContent = '😂😂😂'; return; }
+    const idx = IMAGES.map((_, i) => i).sort(() => Math.random() - 0.5);
+    for (let i = 0; i < n; i++) {
+      const f = document.createElement('div'), sz = big ? rand(22, 38) : rand(32, 50);
+      f.className = 'face a' + (i % 3);
+      f.style.cssText = 'left:' + rand(0, 100 - sz) + '%;top:' + rand(0, 100 - sz * (big ? 1.5 : 1.1)) + '%;width:' + sz + '%;--r:' + rand(-14, 14) + 'deg;animation-duration:' + rand(0.5, 1.2) + 's;animation-delay:' + (-rand(0, 1)) + 's';
+      const im = document.createElement('img'); im.src = IMAGES[idx[i % idx.length]]; im.alt = ''; f.appendChild(im); el.appendChild(f);
+    }
+    for (let i = 0; i < Math.ceil(n / 2); i++) {
+      const b = document.createElement('div'); b.className = 'bub'; b.textContent = pick(WALL_TAUNTS);
+      b.style.cssText = 'left:' + rand(2, 68) + '%;top:' + rand(2, 80) + '%;animation-delay:' + (-rand(0, 5)) + 's'; el.appendChild(b);
+    }
+  }
+  let yoTimer = null;
+  function hideOverlay() { clearTimeout(yoTimer); $('yardOverlay').classList.add('hidden'); }
+  function showOverlay(win) {
+    buildWall($('yoWall'), 14, true);
+    $('yoBig').textContent = win ? pick(['HA HA HA', 'HE ACTUALLY DID IT', 'LOOK AT HIM']) : '🚨 THE YARD 🚨';
+    $('yoSub').textContent = pick(win ? OV_WIN : OV_ASSIGN);
+    $('yardOverlay').classList.remove('hidden');
+    clearTimeout(yoTimer); yoTimer = setTimeout(hideOverlay, win ? 10000 : 9000);
+  }
+  $('yoClose').onclick = hideOverlay;
+  const baseTitle = document.title; let blinkT = null;
+  function startBlink() { stopBlink(); let on = false; blinkT = setInterval(() => { on = !on; document.title = on ? '🚨 THE YARD 🚨' : baseTitle; }, 800); }
+  function stopBlink() { if (blinkT) clearInterval(blinkT); blinkT = null; document.title = baseTitle; }
+
+  function assignYard(test) {
+    if (!G.running || G.current) return false;
+    const damsel = draw('mode', MODES) === 'damsel', nm = namer(), now = Date.now();
+    const task = { id: YARD_ID, name: draw('ytitle', YARD_TITLES), yard: true, test: !!test };
+    const msg = damsel ? { paragraph: nm(draw('ydamsel', YARD_DAMSEL)) } : { lead: nm(draw('ylead', YARD_LEADS)), strict: nm(draw('yline', YARD_LINES)) };
+    G.current = { task, assignedAt: now, tauntPts: null, tauntText: '', damsel, msg, imgIdx: -1, challenge: newChallenge(), headed: false, stopAt: null, pausedMs: 0, rejects: 0, bled: 0, tookBank: 0, charged: 0, detention: null, unlocked: false, nagAt: now + 180000, note: '' };
+    if (!test) { const take = Math.min(3, G.total); G.total -= take; G.current.charged = take; Y.target = 0; saveY(); } // cover charge
+    G.afterYard = false;
+    saveGame(); renderAssignment(); renderStatus();
+    yardBuzz(true); startBlink(); showOverlay(false);
+    try { if ('Notification' in window && Notification.permission === 'granted') new Notification('THE YARD', { body: task.name }); } catch {}
+    return true;
+  }
+
+  function tickYard(now) {
+    const c = G.current, ms = elapsedMs(c, now), p = pointsFor(ms, c.task);
+    $('livePoints').textContent = p;
+    $('elapsed').textContent = c.stopAt ? 'Clock stopped at ' + fmt(ms) + ' while Johanna reviews.' : 'Elapsed: ' + fmt(ms) + ' (−1 point every 2 min, then −1 banked point every 5 min)';
+    let changed = false;
+    if (!c.stopAt) {
+      if (!c.headed && now >= c.nagAt) { yardBuzz(false); c.nagAt = now + 180000; c.tauntText = '“' + pick(YARD_NAGS) + '”'; c.tauntKey = 'nag'; changed = true; }
+      const owed = ms >= 25 * 60000 ? Math.floor((ms - 20 * 60000) / 300000) : 0;
+      if (owed > c.bled) {
+        const n = owed - c.bled, take = c.task.test ? n : Math.min(n, G.total);
+        if (!c.task.test) G.total -= take;
+        c.tookBank += take; c.bled = owed; ching(); changed = true;
+      }
+      const key = p > 0 ? 'p' + p : 'z' + c.bled, tier = p >= 7 ? 'high' : p >= 4 ? 'mid' : p >= 1 ? 'low' : 'zero';
+      if (c.tauntKey !== key && !(key === 'p10' && !c.tauntKey) && !(c.tauntKey === 'nag' && now < c.nagAt - 150000)) { c.tauntKey = key; c.tauntText = '“' + namer()(draw('yt-' + tier, YARD_TAUNTS[tier])) + '”'; changed = true; }
+    }
+    if (changed) saveGame();
+    $('taunt').textContent = c.tauntText || '';
+    const b = $('yardBank'); b.classList.toggle('red', c.bled > 0);
+    b.textContent = 'Bank: ' + G.total + (c.charged ? ' (cover charge −' + c.charged + ')' : '') + (c.bled ? ' · taken for stalling: −' + c.tookBank : '') + (c.task.test ? ' · TEST: nothing is really taken' : '');
+    renderStatus(now);
+  }
+
+  function renderYard() {
+    const c = G.current, y = !!(c && c.task.yard);
+    $('assignCard').classList.toggle('yard', y);
+    $('yardPanel').classList.toggle('hidden', !y);
+    $('yardBanner').classList.toggle('hidden', !y);
+    $('swapBtn').classList.toggle('hidden', y);
+    if (!y) { $('doneBtn').disabled = false; return; }
+    $('doneDayBtn').classList.add('hidden');
+    $('yardNum').textContent = c.challenge;
+    $('yardTest').classList.toggle('hidden', !c.task.test);
+    $('yardHint').textContent = c.task.test ? 'TEST: the unlock code is ' + yardUnlock(c.challenge) : '';
+    const sent = !!c.stopAt;
+    $('yardMsg').textContent = c.note || '';
+    $('yardHead').classList.toggle('hidden', c.headed);
+    $('yardPhotos').classList.toggle('hidden', !c.headed || sent);
+    $('yardReject').classList.toggle('hidden', !sent || c.unlocked);
+    $('yardAfter').classList.toggle('hidden', !sent);
+    if (sent && c.detention) { $('yardSentence').textContent = c.detention.sentence; $('yardNeed').textContent = c.detention.need; $('yardDetCount').textContent = c.detention.done; $('yardDetIn').disabled = c.detention.done >= c.detention.need; }
+    $('yardCode').disabled = !!c.unlocked;
+    $('yardCodeMsg').textContent = c.unlocked ? '✔ Code accepted.' : $('yardCodeMsg').textContent;
+    $('doneBtn').disabled = !(c.unlocked && c.detention && c.detention.done >= c.detention.need);
+    tickYard(Date.now());
+  }
+
+  $('yardHead').onclick = () => { const c = G.current; if (!c) return; c.headed = true; saveGame(); renderYard(); };
+  $('yardPhotos').onclick = () => {
+    const c = G.current; if (!c || c.stopAt) return;
+    c.stopAt = Date.now(); const ms = elapsedMs(c);
+    c.detention = { sentence: draw('detention', DETENTION), need: ms < 20 * 60000 ? 3 : ms < 30 * 60000 ? 5 : 10, done: 0 };
+    c.note = 'Clock stopped. Send the photos to Claude. While you wait: detention.';
+    saveGame(); $('yardDetIn').value = ''; $('yardCode').value = ''; $('yardCodeMsg').textContent = ''; renderYard(); $('yardDetIn').focus();
+  };
+  $('yardReject').onclick = () => {
+    const c = G.current; if (!c || !c.stopAt) return;
+    c.pausedMs += Date.now() - c.stopAt; c.stopAt = null; c.rejects++; c.challenge = newChallenge(); c.detention = null; c.unlocked = false;
+    c.note = pick(YARD_REJECT) + ' New number: ' + c.challenge + '. The clock is running again.';
+    $('yardCode').value = ''; $('yardCodeMsg').textContent = ''; saveGame(); renderYard();
+  };
+  const norm = t => String(t).toLowerCase().replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim().replace(/\.$/, '');
+  $('yardDetIn').addEventListener('paste', e => e.preventDefault());
+  $('yardDetIn').addEventListener('input', () => {
+    const c = G.current; if (!c || !c.detention || c.detention.done >= c.detention.need) return;
+    if (norm($('yardDetIn').value) === norm(c.detention.sentence)) { c.detention.done++; $('yardDetIn').value = ''; saveGame(); renderYard(); }
+  });
+  $('yardCode').addEventListener('input', () => {
+    const c = G.current; if (!c || c.unlocked) return;
+    const v = $('yardCode').value.replace(/\D/g, '').slice(0, 4); $('yardCode').value = v;
+    if (v.length === 4) { if (v === yardUnlock(c.challenge)) { c.unlocked = true; saveGame(); renderYard(); } else $('yardCodeMsg').textContent = 'Wrong code.'; }
+    else $('yardCodeMsg').textContent = '';
+  });
+  $('testYard').onclick = () => assignYard(true);
+
+  function completeYard() {
+    const c = G.current, task = c.task;
+    if (!(c.unlocked && c.detention && c.detention.done >= c.detention.need)) return;
+    const ms = elapsedMs(c), pts = task.test ? 0 : pointsFor(ms, task);
+    if (!task.test) { G.total += pts; Y.count++; Y.hangoverDay = todayKey(); planYard(addDays(weekStart(Date.now()), 7)); saveY(); }
+    G.results.push({ name: (task.test ? '[TEST] ' : '') + task.name, ms, pts });
+    if (G.results.length > 50) G.results.shift();
+    G.current = null; G.afterYard = true;
+    stopBlink(); scheduleNext(5); // back-to-back: no recovery time
+    render(); showOverlay(true);
   }
 
   /* ---------- Rendering ---------- */
@@ -1192,24 +1582,29 @@
     $('startBtn').disabled = G.running;
     $('stopBtn').disabled = !G.running;
     $('giveNow').disabled = !G.running || !!G.current;
+    $('testYard').disabled = !G.running || !!G.current;
+    $('stopBtn').disabled = !G.running || !!(G.current && G.current.task.yard && !G.current.task.test);
+    $('yardNotice').classList.toggle('hidden', !(yardOn() && new Date(now).getDay() === 1 && Y.target && weekStart(Y.target) === weekStart(now) && !(G.current && G.current.task.yard)));
   }
 
   function renderAssignment() {
     const c = G.current; if (!c) return;
     const img = c.imgIdx >= 0 ? IMAGES[c.imgIdx] : null;
     const para = !!c.msg.paragraph;
-    $('assignImgWrap').innerHTML = img ? `<img src="${img}" alt="">` : '<div class="emoji">👩‍🔧</div>';
+    if (c.task.yard) { $('assignImgWrap').innerHTML = '<div class="wall" id="cardWall"></div>'; buildWall($('cardWall'), 8, false); }
+    else $('assignImgWrap').innerHTML = img ? `<img src="${img}" alt="">` : '<div class="emoji">👩‍🔧</div>';
     $('assignLead').textContent = c.msg.lead || '';
     $('assignName').textContent = c.task.name;
     $('assignStrict').textContent = para ? c.msg.paragraph : c.msg.strict;
     $('assignStrict').style.fontWeight = para ? '400' : '600';
     $('assignDetails').textContent = para ? '' : (c.task.details || '');
     $('assignLead').classList.toggle('hidden', para);
-    $('assignName').classList.toggle('hidden', para);
+    $('assignName').classList.toggle('hidden', para && !c.task.yard);
     $('taunt').textContent = c.tauntText || '';
     $('doneDayBtn').classList.toggle('hidden', !c.task.repeat);
     $('assignCard').classList.remove('hidden');
     $('waiting').classList.add('hidden');
+    renderYard();
   }
 
   function renderDoneLog() {
@@ -1236,7 +1631,7 @@
     renderStatus(); renderDoneLog(); renderCashLog();
     if (G.current) renderAssignment();
     else {
-      $('assignCard').classList.add('hidden');
+      $('assignCard').classList.add('hidden'); $('assignCard').classList.remove('yard'); stopBlink();
       $('waiting').classList.remove('hidden');
       $('waiting').textContent = waitingText();
     }
@@ -1267,7 +1662,7 @@
   }
   function openEdit() {
     $('gapMin').value = settings.gapMin; $('gapMax').value = settings.gapMax;
-    $('aStart').value = settings.activeStart; $('aEnd').value = settings.activeEnd;
+    $('aStart').value = settings.activeStart; $('aEnd').value = settings.activeEnd; $('yardOn').checked = yardOn();
     document.querySelectorAll('.aDay').forEach(c => c.checked = settings.activeDays.includes(+c.value));
     renderTasks(); renderIdeas();
     $('editModal').classList.remove('hidden');
@@ -1303,6 +1698,7 @@
   }
   $('aStart').onchange = $('aEnd').onchange = saveActive;
   $('aDays').onchange = saveActive;
+  $('yardOn').onchange = () => { settings.yardOn = $('yardOn').checked; saveSettings(); if (yardOn() && !Y.target) planYard(); renderStatus(); };
 
   // Ideas to choose from. Micro-tasks are one quick thing; dents are 5-minute repeatable jobs; scheduled ones come back every N weeks; one-offs run once.
   const IDEAS = [
