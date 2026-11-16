@@ -67,18 +67,18 @@
   .yard-bank.red { color:#ff6b6b; }
   .yard-notice { background:#3b0707; color:#fff; border:2px solid #ff2a2a; font-weight:700; text-align:center; }
   .assign.yard input[type=text] { background:#fff; color:#111; }
-  .wall { position:relative; width:100%; aspect-ratio:1/1; max-height:min(800px, calc(100vh - 150px)); background:#1d0000; border-radius:12px; overflow:hidden; }
-  .wall .face { position:absolute; aspect-ratio:1; animation:fbounce .8s ease-in-out infinite alternate; }
+  .wall { position:relative; width:100%; aspect-ratio:1/1; max-height:min(800px, calc(100vh - 150px)); background:#1d0000; border-radius:12px; overflow:hidden; display:grid; gap:6px; padding:6px; box-sizing:border-box; }
+  .wall .face { position:relative; min-width:0; min-height:0; animation:fbounce .8s ease-in-out infinite alternate; }
   .wall .face.a1 { animation-name:fshake; animation-timing-function:linear; }
   .wall .face.a2 { animation-name:fzoom; }
-  .assign .wall .face img, .wall .face img { width:100%; height:100%; min-height:0; max-height:none; object-fit:cover; border-radius:50%; border:3px solid #fff; display:block; }
-  @keyframes fbounce { from { transform:translateY(0) rotate(var(--r)); } to { transform:translateY(-14%) rotate(calc(var(--r) * -1)); } }
-  @keyframes fshake { 0% { transform:translateX(0) rotate(var(--r)); } 25% { transform:translateX(-7%) rotate(calc(var(--r) * -1)); } 50% { transform:translateX(0) rotate(var(--r)); } 75% { transform:translateX(7%) rotate(calc(var(--r) * -1)); } 100% { transform:translateX(0) rotate(var(--r)); } }
-  @keyframes fzoom { from { transform:scale(.88) rotate(var(--r)); } to { transform:scale(1.12) rotate(calc(var(--r) * -1)); } }
+  .assign .wall .face img, .wall .face img { width:100%; height:100%; min-height:0; max-height:none; object-fit:cover; border-radius:14%; border:3px solid #fff; display:block; box-sizing:border-box; }
+  @keyframes fbounce { from { transform:translateY(0) rotate(var(--r)); } to { transform:translateY(-4%) rotate(calc(var(--r) * -1)); } }
+  @keyframes fshake { 0% { transform:translateX(0) rotate(var(--r)); } 25% { transform:translateX(-3%) rotate(calc(var(--r) * -1)); } 50% { transform:translateX(0) rotate(var(--r)); } 75% { transform:translateX(3%) rotate(calc(var(--r) * -1)); } 100% { transform:translateX(0) rotate(var(--r)); } }
+  @keyframes fzoom { from { transform:scale(.94) rotate(var(--r)); } to { transform:scale(1.02) rotate(calc(var(--r) * -1)); } }
   .wall .bub { position:absolute; background:#fff; color:#a00; font-weight:800; padding:4px 10px; border-radius:14px; font-size:.95rem; animation:ybub 5s infinite; white-space:nowrap; z-index:2; }
   @keyframes ybub { 0%, 55%, 100% { opacity:0; transform:scale(.4); } 62%, 90% { opacity:1; transform:scale(1); } }
   .yard-overlay { position:fixed; inset:0; z-index:60; background:#240000; display:flex; align-items:center; justify-content:center; }
-  .yard-overlay .wall { position:absolute; inset:0; width:auto; aspect-ratio:auto; max-height:none; border-radius:0; }
+  .yard-overlay .wall { position:absolute; inset:0; width:auto; aspect-ratio:auto; max-height:none; border-radius:0; opacity:.9; }
   .yo-text { position:relative; z-index:3; text-align:center; color:#fff; text-shadow:0 2px 14px #000, 0 0 30px #000; padding:16px; }
   #yoBig { font-size:clamp(2rem, 9vw, 5rem); font-weight:900; }
   #yoSub { font-size:clamp(1rem, 3.5vw, 1.6rem); font-weight:700; margin:6px 0 14px; }
@@ -1445,10 +1445,12 @@
     el.innerHTML = '';
     if (!IMAGES.length) { el.textContent = '😂😂😂'; return; }
     const idx = IMAGES.map((_, i) => i).sort(() => Math.random() - 0.5);
-    for (let i = 0; i < n; i++) {
-      const f = document.createElement('div'), sz = big ? rand(22, 38) : rand(32, 50);
+    const cols = big ? (window.innerWidth > window.innerHeight ? 5 : 3) : 3, rows = Math.ceil(n / cols);
+    el.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)'; el.style.gridTemplateRows = 'repeat(' + rows + ', 1fr)';
+    for (let i = 0; i < cols * rows; i++) {
+      const f = document.createElement('div');
       f.className = 'face a' + (i % 3);
-      f.style.cssText = 'left:' + rand(0, 100 - sz) + '%;top:' + rand(0, 100 - sz * (big ? 1.5 : 1.1)) + '%;width:' + sz + '%;--r:' + rand(-14, 14) + 'deg;animation-duration:' + rand(0.5, 1.2) + 's;animation-delay:' + (-rand(0, 1)) + 's';
+      f.style.cssText = '--r:' + rand(-4, 4) + 'deg;animation-duration:' + rand(0.5, 1.2) + 's;animation-delay:' + (-rand(0, 1)) + 's';
       const im = document.createElement('img'); im.src = IMAGES[idx[i % idx.length]]; im.alt = ''; f.appendChild(im); el.appendChild(f);
     }
     for (let i = 0; i < Math.ceil(n / 2); i++) {
@@ -1459,7 +1461,7 @@
   let yoTimer = null;
   function hideOverlay() { clearTimeout(yoTimer); $('yardOverlay').classList.add('hidden'); }
   function showOverlay(win) {
-    buildWall($('yoWall'), 14, true);
+    buildWall($('yoWall'), 12, true);
     $('yoBig').textContent = win ? pick(['HA HA HA', 'HE ACTUALLY DID IT', 'LOOK AT HIM']) : '🚨 THE YARD 🚨';
     $('yoSub').textContent = pick(win ? OV_WIN : OV_ASSIGN);
     $('yardOverlay').classList.remove('hidden');
@@ -1591,7 +1593,7 @@
     const c = G.current; if (!c) return;
     const img = c.imgIdx >= 0 ? IMAGES[c.imgIdx] : null;
     const para = !!c.msg.paragraph;
-    if (c.task.yard) { $('assignImgWrap').innerHTML = '<div class="wall" id="cardWall"></div>'; buildWall($('cardWall'), 8, false); }
+    if (c.task.yard) { $('assignImgWrap').innerHTML = '<div class="wall" id="cardWall"></div>'; buildWall($('cardWall'), 9, false); }
     else $('assignImgWrap').innerHTML = img ? `<img src="${img}" alt="">` : '<div class="emoji">👩‍🔧</div>';
     $('assignLead').textContent = c.msg.lead || '';
     $('assignName').textContent = c.task.name;
